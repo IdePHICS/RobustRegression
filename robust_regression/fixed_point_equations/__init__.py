@@ -1,0 +1,2 @@
+BLEND_FPE = 0.75
+TOL_FPE = 1e-11

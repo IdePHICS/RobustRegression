@@ -1,6 +1,7 @@
-import numerical_functions as numfun
 from numba import njit
 import numpy as np
+from scipy.integrate import dblquad
+from utils.integration_utils import divide_integration_borders_multiple_grid, find_integration_borders_square
 
 
 @njit(error_model="numpy", fastmath=True)
@@ -28,23 +29,104 @@ def var_hat_func_BO_single_noise(m, q, sigma, alpha, delta):
     q_hat = alpha / (1 + delta - q)
     return q_hat, q_hat, 1 - q_hat
 
+# --------------------------------
+
+@njit(error_model="numpy", fastmath=True)
+def ZoutBayes_decorrelated_noise(y, omega, V, delta_in, delta_out, percentage, beta):
+    return (1 - percentage) * np.exp(-((y - omega) ** 2) / (2 * (V + delta_in))) / np.sqrt(
+        2 * np.pi * (V + delta_in)
+    ) + percentage * np.exp(
+        -((y - beta * omega) ** 2) / (2 * (beta ** 2 * V + delta_out))
+    ) / np.sqrt(
+        2 * np.pi * (beta ** 2 * V + delta_out)
+    )
+
+
+@njit(error_model="numpy", fastmath=True)
+def foutBayes_decorrelated_noise(y, omega, V, delta_in, delta_out, percentage, beta):
+    small_exponential = np.exp(-((y - omega) ** 2) / (2 * (V + delta_in)))
+    large_exponential = np.exp(
+        -((y - beta * omega) ** 2) / (2 * (beta ** 2 * V + delta_out))
+    )
+    return (
+        (y - omega) * (1 - percentage) * small_exponential / np.power(V + delta_in, 3 / 2)
+        + percentage
+        * beta
+        * (y - beta * omega)
+        * large_exponential
+        / np.power(beta ** 2 * V + delta_out, 3 / 2)
+    ) / (
+        (1 - percentage) * small_exponential / np.power(V + delta_in, 1 / 2)
+        + percentage * large_exponential / np.power(beta ** 2 * V + delta_out, 1 / 2)
+    )
+
+
+@njit(error_model="numpy", fastmath=True)
+def q_integral_BO_decorrelated_noise(
+    y, xi, q, m, sigma, delta_in, delta_out, percentage, beta
+):
+    return (
+        np.exp(-(xi ** 2) / 2)
+        / np.sqrt(2 * np.pi)
+        * ZoutBayes_decorrelated_noise(
+            y, np.sqrt(q) * xi, 1 - q, delta_in, delta_out, percentage, beta
+        )
+        * (
+            foutBayes_decorrelated_noise(
+                y, np.sqrt(q) * xi, 1 - q, delta_in, delta_out, percentage, beta
+            )
+            ** 2
+        )
+    )
+
+
 
 def var_hat_func_BO_num_double_noise(m, q, sigma, alpha, delta_in, delta_out, percentage):
-    q_hat = alpha * numfun.q_hat_equation_BO_double_noise(
-        m, q, sigma, delta_in, delta_out, percentage
+    borders = find_integration_borders_square(
+        q_integral_BO_decorrelated_noise,
+        np.sqrt((1 + max(delta_in, delta_out))),
+        1.0,
+        (q, m, sigma, delta_in, delta_out, percentage, 1.0)
     )
+
+    # args = {"m": m, "q": q, "sigma": sigma}
+    # domain_xi, domain_y = domains_line_constraint(
+    #     borders, border_BO, test_fun_BO, args, args
+    # )
+
+    if delta_out <= 0.11 * delta_in:
+        domain_xi, domain_y = divide_integration_borders_multiple_grid(borders, N=10)
+    elif delta_out <= 0.5 * delta_in:
+        domain_xi, domain_y = divide_integration_borders_multiple_grid(borders, N=7)
+    elif delta_out <= delta_in:
+        domain_xi, domain_y = divide_integration_borders_multiple_grid(borders, N=5)
+    else:
+        domain_xi, domain_y = divide_integration_borders_multiple_grid(borders, N=3)
+
+    integral_value = 0.0
+    for xi_funs, y_funs in zip(domain_xi, domain_y):
+        integral_value += dblquad(
+            q_integral_BO_decorrelated_noise,
+            xi_funs[0],
+            xi_funs[1],
+            y_funs[0],
+            y_funs[1],
+            args=(q, m, sigma, delta_in, delta_out, percentage, 1.0)
+        )[0]
+
+    q_hat = alpha * integral_value
     return q_hat, q_hat, 1 - q_hat
 
+# --------------------------------
 
 def var_hat_func_BO_num_decorrelated_noise(
     m, q, sigma, alpha, delta_in, delta_out, percentage, beta
 ):
     borders = find_integration_borders_square(
-        lambda y, xi: q_integral_BO_decorrelated_noise(
-            y, xi, q, m, sigma, delta_in, delta_out, percentage, beta
-        ),
+        q_integral_BO_decorrelated_noise,
         np.sqrt((1 + max(delta_in, delta_out))),
         1.0,
+        (q, m, sigma, delta_in, delta_out, percentage, beta)
     )
 
     # args = {"m": m, "q": q, "sigma": sigma}
@@ -72,7 +154,4 @@ def var_hat_func_BO_num_decorrelated_noise(
         )[0]
 
     q_hat = alpha * integral_value
-    # q_hat = alpha * numfun.q_hat_equation_BO_decorrelated_noise(
-    #     m, q, sigma, delta_in, delta_out, percentage, beta
-    # )
     return q_hat, q_hat, 1 - q_hat

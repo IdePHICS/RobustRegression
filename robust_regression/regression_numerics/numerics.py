@@ -1,20 +1,13 @@
 import numpy as np
-from numba import njit
-from amp_funcs import (
-    input_functions_gaussian_prior,
-    output_functions_decorrelated_noise,
-    output_functions_double_noise,
-    output_functions_single_noise,
-)
+from data_generation import data_generation
 
-from numerics import TOL_GAMP, BLEND_GAMP
 
-def find_numerical_mean_std(
-    alpha,
+def run_erm_weight_finding(
+    alpha: float,
     measure_fun,
     find_coefficients_fun,
-    n_features,
-    repetitions,
+    n_features: int,
+    repetitions: int,
     measure_fun_args,
     find_coefficients_fun_args,
 ):
@@ -28,7 +21,7 @@ def find_numerical_mean_std(
             n_generalization=1,
             measure_fun_args=measure_fun_args,
         )
-        
+
         print(xs.shape, ys.shape)
 
         estimated_theta = find_coefficients_fun(ys, xs, *find_coefficients_fun_args)
@@ -47,58 +40,3 @@ def find_numerical_mean_std(
     del all_gen_errors
 
     return error_mean, error_std
-
-
-@njit(error_model="numpy", fastmath=True)
-def find_coefficients_AMP(input_funs, output_funs, ys, xs, *noise_args):
-    _, d = xs.shape
-
-    a_t_1 = 0.1 * np.random.rand(d) + 0.95
-    v_t_1 = 0.5 * np.random.rand(d) + 0.01
-    gout_t_1 = 0.5 * np.random.rand(1) + 0.001
-
-    F = xs / np.sqrt(d)
-    F2 = F ** 2
-
-    err = 1.0
-    while err > TOL_GAMP:
-        V_t = F2 @ v_t_1
-        omega_t = F @ a_t_1 - V_t * gout_t_1
-
-        gout_t, Dgout_t = output_funs(ys, omega_t, V_t, *noise_args)
-
-        sigma_t = -1 / (Dgout_t @ F2)
-        R_t = a_t_1 + sigma_t * (gout_t @ F)
-
-        a_t, v_t = input_funs(R_t, sigma_t)
-
-        err = max(np.max(a_t - a_t_1), np.max(v_t - v_t_1))
-
-        a_t_1 = BLEND_GAMP * a_t + (1 - BLEND_GAMP) * a_t_1
-        v_t_1 = BLEND_GAMP * v_t + (1 - BLEND_GAMP) * v_t_1
-        gout_t_1 = BLEND_GAMP * gout_t + (1 - BLEND_GAMP) * gout_t_1
-
-    return a_t  # , v_t
-
-
-def find_coefficients_AMP_single_noise(ys, xs, *noise_args):
-    return find_coefficients_AMP(
-        input_functions_gaussian_prior, output_functions_single_noise, ys, xs, *noise_args
-    )
-
-
-def find_coefficients_AMP_double_noise(ys, xs, *noise_args):
-    return find_coefficients_AMP(
-        input_functions_gaussian_prior, output_functions_double_noise, ys, xs, *noise_args
-    )
-
-
-def find_coefficients_AMP_decorrelated_noise(ys, xs, *noise_args):
-    return find_coefficients_AMP(
-        input_functions_gaussian_prior,
-        output_functions_decorrelated_noise,
-        ys,
-        xs,
-        *noise_args
-    )
-

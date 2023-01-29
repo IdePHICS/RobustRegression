@@ -1,17 +1,17 @@
 import numpy as np
+from fixed_point_equations import BLEND_FPE, TOL_FPE, MAX_ITER_FPE
+from utils.errors import ConvergenceError
 
-from multiprocessing import Pool
-from tqdm.auto import tqdm
-
-from fixed_point_equations import BLEND_FPE, TOL_FPE
-
+# from multiprocessing import Pool
+# from tqdm.auto import tqdm
 
 def fixed_point_finder(
     var_func, var_hat_func, reg_param: float, alpha: float, init, var_hat_kwargs
 ):
     m, q, sigma = init[0], init[1], init[2]
     err = 1.0
-    reg_param = float(reg_param)
+    iter_nb = 0
+
     while err > TOL_FPE:
         m_hat, q_hat, sigma_hat = var_hat_func(m, q, sigma, alpha, **var_hat_kwargs)
         temp_m, temp_q, temp_sigma = m, q, sigma
@@ -19,35 +19,35 @@ def fixed_point_finder(
         m, q, sigma = var_func(m_hat, q_hat, sigma_hat, reg_param)
 
         err = np.max(np.abs([(temp_m - m), (temp_q - q), (temp_sigma - sigma)]))
+        
         m = BLEND_FPE * m + (1 - BLEND_FPE) * temp_m
         q = BLEND_FPE * q + (1 - BLEND_FPE) * temp_q
         sigma = BLEND_FPE * sigma + (1 - BLEND_FPE) * temp_sigma
 
-        # print(err)
-        # print(
-        #     "  err: {:.8f} alpha : {:.2f} m = {:.9f}; q = {:.9f}; \[CapitalSigma] = {:.9f}".format(
-        #         err, alpha, m, q, sigma
-        #     )
-        # )
+        iter_nb += 1
+
+        if iter_nb > MAX_ITER_FPE:
+            raise ConvergenceError("The fixed point procedure didn't converge after {:d} iterations".format(iter_nb))
+
     return m, q, sigma
 
 
-def _find_fixed_point(alpha, var_func, var_hat_func, reg_param, initial_cond, var_hat_kwargs):
-    m, q, sigma = fixed_point_finder(
-        var_func,
-        var_hat_func,
-        reg_param=reg_param,
-        alpha=alpha,
-        init=initial_cond,
-        var_hat_kwargs=var_hat_kwargs,
-    )
-    return m, q, sigma
+# def _find_fixed_point(alpha, var_func, var_hat_func, reg_param, initial_cond, var_hat_kwargs):
+#     m, q, sigma = fixed_point_finder(
+#         var_func,
+#         var_hat_func,
+#         reg_param=reg_param,
+#         alpha=alpha,
+#         init=initial_cond,
+#         var_hat_kwargs=var_hat_kwargs,
+#     )
+#     return m, q, sigma
 
 
-def fixed_point_func(f, alpha, var_func, var_hat_func, reg_param, initial_cond, var_hat_kwargs):
-    m, q, sigma = fixed_point_finder(
-        var_func, var_hat_func, reg_param, alpha, initial_cond, var_hat_kwargs
-    )
+# def fixed_point_func(f, alpha, var_func, var_hat_func, reg_param, initial_cond, var_hat_kwargs):
+#     m, q, sigma = fixed_point_finder(
+#         var_func, var_hat_func, reg_param, alpha, initial_cond, var_hat_kwargs
+#     )
 
 
 # def no_parallel_different_alpha_observables_fpeqs_parallel(

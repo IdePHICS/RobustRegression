@@ -1,9 +1,8 @@
 import numpy as np
 from fixed_point_equations import BLEND_FPE, TOL_FPE, MAX_ITER_FPE
 from utils.errors import ConvergenceError
+from aux_functions.misc import damped_update
 
-# from multiprocessing import Pool
-# from tqdm.auto import tqdm
 
 def fixed_point_finder(
     var_func, var_hat_func, reg_param: float, alpha: float, init, var_hat_kwargs
@@ -11,23 +10,20 @@ def fixed_point_finder(
     m, q, sigma = init[0], init[1], init[2]
     err = 1.0
     iter_nb = 0
-
     while err > TOL_FPE:
         m_hat, q_hat, sigma_hat = var_hat_func(m, q, sigma, alpha, **var_hat_kwargs)
-        temp_m, temp_q, temp_sigma = m, q, sigma
 
-        m, q, sigma = var_func(m_hat, q_hat, sigma_hat, reg_param)
+        new_m, new_q, new_sigma = var_func(m_hat, q_hat, sigma_hat, reg_param)
 
-        err = np.max(np.abs([(temp_m - m), (temp_q - q), (temp_sigma - sigma)]))
-        
-        m = BLEND_FPE * m + (1 - BLEND_FPE) * temp_m
-        q = BLEND_FPE * q + (1 - BLEND_FPE) * temp_q
-        sigma = BLEND_FPE * sigma + (1 - BLEND_FPE) * temp_sigma
+        err = np.max(np.abs([(new_m - m), (new_q - q), (new_sigma - sigma)]))
+
+        m = damped_update(new_m, m, BLEND_FPE)
+        q = damped_update(new_q, q, BLEND_FPE)
+        sigma = damped_update(new_sigma, sigma, BLEND_FPE)
 
         iter_nb += 1
-
         if iter_nb > MAX_ITER_FPE:
-            raise ConvergenceError("The fixed point procedure didn't converge after {:d} iterations".format(iter_nb))
+            raise ConvergenceError("fixed_point_finder", iter_nb)
 
     return m, q, sigma
 

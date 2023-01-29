@@ -1,4 +1,4 @@
-from numpy import sqrt, abs
+from numpy import sqrt
 from numba import njit
 
 

@@ -1,18 +1,19 @@
 import numpy as np
 from numpy.random import random
 from numba import njit
-from utils.integration_utils import x_ge, w_ge
-from numerics import TOL_GAMP, BLEND_GAMP, MAX_ITER_GAMP
-from utils.errors import ConvergenceError
-from aux_functions.misc import damped_update
+from ..utils.integration_utils import x_ge, w_ge
+from ..regression_numerics import TOL_GAMP, BLEND_GAMP, MAX_ITER_GAMP
+from ..utils.errors import ConvergenceError
+from ..aux_functions.misc import damped_update
 
 
-def GAMP_algorithm(f_w, Df_w, f_out, Df_out, ys, xs):
+def GAMP_algorithm(f_w, Df_w, f_out, Df_out, ys, xs, f_w_args, f_out_args):
     _, d = xs.shape
 
     # random init
     w_hat_t = 0.1 * random(d) + 0.95
     c_w_t = 0.5 * random(d) + 0.05
+    # probably different dimension
     f_out_t_1 = 0.5 * random(d) + 0.05
 
     F = xs / np.sqrt(d)
@@ -22,16 +23,16 @@ def GAMP_algorithm(f_w, Df_w, f_out, Df_out, ys, xs):
     iter_nb = 0
     while err > TOL_GAMP:
         V_t = F2 @ c_w_t
-        omega_t = F @ w_hat_t - V_t @ f_out_t_1
+        omega_t = F @ w_hat_t - V_t * f_out_t_1
 
-        f_out_t = f_out(ys, omega_t, V_t)
-        Df_out_t = Df_out(ys, omega_t, V_t)
+        f_out_t = f_out(ys, omega_t, V_t, *f_out_args)
+        Df_out_t = Df_out(ys, omega_t, V_t, *f_out_args)
 
         Lambda_t = Df_out_t @ F2
-        gamma_t = F @ f_out_t + Lambda_t @ w_hat_t
+        gamma_t = F @ f_out_t + Lambda_t * w_hat_t
 
-        new_w_hat_t = f_w(gamma_t, Lambda_t)
-        new_c_w_t = Df_w(gamma_t, Lambda_t)
+        new_w_hat_t = f_w(gamma_t, Lambda_t, *f_w_args)
+        new_c_w_t = Df_w(gamma_t, Lambda_t, *f_w_args)
 
         err = max(np.max(np.abs(new_w_hat_t - w_hat_t)), np.max(np.abs(new_c_w_t - c_w_t)))
 
@@ -40,9 +41,7 @@ def GAMP_algorithm(f_w, Df_w, f_out, Df_out, ys, xs):
 
         iter_nb += 1
         if iter_nb > MAX_ITER_GAMP:
-            raise ConvergenceError(
-                "The GAMP procedure didn't converge after {:d} iterations".format(iter_nb)
-            )
+            raise ConvergenceError("GAMP_algorithm", iter_nb)
 
     return w_hat_t
 
@@ -133,14 +132,14 @@ def output_functions_single_noise(ys, omegas, Vs, delta):
 
 
 @njit(error_model="numpy", fastmath=True)
-def likelihood_double_gaussians(y, z, delta_small, delta_large, eps):
-    return (1 - eps) / (np.sqrt(2 * np.pi * delta_small)) * np.exp(
-        -0.5 * (y - z) ** 2 / (delta_small)
-    ) + eps / (np.sqrt(2 * np.pi * delta_large)) * np.exp(-0.5 * (y - z) ** 2 / (delta_large))
+def likelihood_double_gaussians(y, z, delta_in, delta_out, eps):
+    return (1 - eps) / (np.sqrt(2 * np.pi * delta_in)) * np.exp(
+        -0.5 * (y - z) ** 2 / (delta_in)
+    ) + eps / (np.sqrt(2 * np.pi * delta_out)) * np.exp(-0.5 * (y - z) ** 2 / (delta_out))
 
 
 @njit(error_model="numpy")
-def output_functions_double_noise(ys, omegas, Vs, delta_small, delta_large, eps):
+def output_functions_double_noise(ys, omegas, Vs, delta_in, delta_out, eps):
     gout = np.empty_like(ys)
     Dgout = np.empty_like(ys)
 
@@ -149,19 +148,19 @@ def output_functions_double_noise(ys, omegas, Vs, delta_small, delta_large, eps)
         jacobian = np.sqrt(2.0) * np.sqrt(V)
 
         simple_int = np.sum(
-            w_ge * jacobian * likelihood_double_gaussians(y, z, delta_small, delta_large, eps)
+            w_ge * jacobian * likelihood_double_gaussians(y, z, delta_in, delta_out, eps)
         )
         gout[idx] = np.sum(
             w_ge
             * jacobian
-            * likelihood_double_gaussians(y, z, delta_small, delta_large, eps)
+            * likelihood_double_gaussians(y, z, delta_in, delta_out, eps)
             * (z - omega)
         ) / (V * simple_int)
 
         first_term_Dgout = np.sum(
             w_ge
             * jacobian
-            * likelihood_double_gaussians(y, z, delta_small, delta_large, eps)
+            * likelihood_double_gaussians(y, z, delta_in, delta_out, eps)
             * (z - omega) ** 2
         ) / (V**2 * simple_int)
         Dgout[idx] = first_term_Dgout - 1 / V - gout[idx] ** 2
@@ -171,17 +170,17 @@ def output_functions_double_noise(ys, omegas, Vs, delta_small, delta_large, eps)
 
 @njit(error_model="numpy", fastmath=True)
 def likelihood_decorrelated_gaussians(
-    y: float, z: float, delta_small: float, delta_large: float, eps: float, beta: float
+    y: float, z: float, delta_in: float, delta_out: float, eps: float, beta: float
 ) -> float:
-    return (1 - eps) / (np.sqrt(2 * np.pi * delta_small)) * np.exp(
-        -0.5 * (y - z) ** 2 / (delta_small)
-    ) + eps / (np.sqrt(2 * np.pi * delta_large)) * np.exp(
-        -0.5 * (y - beta * z) ** 2 / (delta_large)
+    return (1 - eps) / (np.sqrt(2 * np.pi * delta_in)) * np.exp(
+        -0.5 * (y - z) ** 2 / (delta_in)
+    ) + eps / (np.sqrt(2 * np.pi * delta_out)) * np.exp(
+        -0.5 * (y - beta * z) ** 2 / (delta_out)
     )
 
 
 @njit(error_model="numpy")
-def output_functions_decorrelated_noise(ys, omegas, Vs, delta_small, delta_large, eps, beta):
+def output_functions_decorrelated_noise(ys, omegas, Vs, delta_in, delta_out, eps, beta):
     gout = np.empty_like(ys)
     Dgout = np.empty_like(ys)
 
@@ -192,19 +191,19 @@ def output_functions_decorrelated_noise(ys, omegas, Vs, delta_small, delta_large
         simple_int = np.sum(
             w_ge
             * jacobian
-            * likelihood_decorrelated_gaussians(y, z, delta_small, delta_large, eps, beta)
+            * likelihood_decorrelated_gaussians(y, z, delta_in, delta_out, eps, beta)
         )
         gout[idx] = np.sum(
             w_ge
             * jacobian
-            * likelihood_decorrelated_gaussians(y, z, delta_small, delta_large, eps, beta)
+            * likelihood_decorrelated_gaussians(y, z, delta_in, delta_out, eps, beta)
             * (z - omega)
         ) / (V * simple_int)
 
         first_term_Dgout = np.sum(
             w_ge
             * jacobian
-            * likelihood_decorrelated_gaussians(y, z, delta_small, delta_large, eps, beta)
+            * likelihood_decorrelated_gaussians(y, z, delta_in, delta_out, eps, beta)
             * (z - omega) ** 2
         ) / (V**2 * simple_int)
         Dgout[idx] = first_term_Dgout - 1 / V - gout[idx] ** 2

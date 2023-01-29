@@ -1,29 +1,24 @@
 import numpy as np
 
+
 def measure_gen_single(generalization, teacher_vector, xs, delta):
     n_samples, n_features = xs.shape
     w_xs = np.divide(xs @ teacher_vector, np.sqrt(n_features))
     if generalization:
         ys = w_xs
     else:
-        error_sample = np.sqrt(delta) * np.random.normal(
-            loc=0.0, scale=1.0, size=(n_samples,)
-        )
+        error_sample = np.sqrt(delta) * np.random.normal(loc=0.0, scale=1.0, size=(n_samples,))
         ys = w_xs + error_sample
     return ys
 
 
-def measure_gen_double(
-    generalization, teacher_vector, xs, delta_in, delta_out, percentage
-):
+def measure_gen_double(generalization, teacher_vector, xs, delta_in, delta_out, percentage):
     n_samples, n_features = xs.shape
     w_xs = np.divide(xs @ teacher_vector, np.sqrt(n_features))
     if generalization:
         ys = w_xs
     else:
-        choice = np.random.choice(
-            [0, 1], p=[1 - percentage, percentage], size=(n_samples,)
-        )
+        choice = np.random.choice([0, 1], p=[1 - percentage, percentage], size=(n_samples,))
         error_sample = np.empty((n_samples, 2))
         error_sample[:, 0] = np.sqrt(delta_in) * np.random.normal(
             loc=0.0, scale=1.0, size=(n_samples,)
@@ -37,16 +32,20 @@ def measure_gen_double(
 
 
 def measure_gen_decorrelated(
-    generalization, teacher_vector, xs, delta_in, delta_out, percentage, beta
+    generalization: bool,
+    teacher_vector,
+    xs,
+    delta_in: float,
+    delta_out: float,
+    percentage: float,
+    beta: float,
 ):
     n_samples, n_features = xs.shape
     w_xs = np.divide(xs @ teacher_vector, np.sqrt(n_features))
     if generalization:
         ys = w_xs
     else:
-        choice = np.random.choice(
-            [0, 1], p=[1 - percentage, percentage], size=(n_samples,)
-        )
+        choice = np.random.choice([0, 1], p=[1 - percentage, percentage], size=(n_samples,))
         error_sample = np.empty((n_samples, 2))
         error_sample[:, 0] = np.sqrt(delta_in) * np.random.normal(
             loc=0.0, scale=1.0, size=(n_samples,)
@@ -61,7 +60,7 @@ def measure_gen_decorrelated(
 
 
 def data_generation(
-    measure_fun, n_features, n_samples, n_generalization, measure_fun_args
+    measure_fun, n_features: int, n_samples: int, n_generalization: int, measure_fun_args
 ):
     theta_0_teacher = np.random.normal(loc=0.0, scale=1.0, size=(n_features,))
 

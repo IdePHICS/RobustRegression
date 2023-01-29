@@ -1,5 +1,5 @@
 import numpy as np
-from data_generation import data_generation
+from .data_generation import data_generation
 
 
 def run_erm_weight_finding(

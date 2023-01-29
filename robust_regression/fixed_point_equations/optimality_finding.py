@@ -6,6 +6,7 @@ from fixed_point_equations import SMALLEST_REG_PARAM, SMALLEST_HUBER_PARAM, XATO
 
 # --------------------------------
 
+
 @njit(error_model="numpy", fastmath=True)
 def gen_error(m, q, sigma, *args):
     return 1 + q - 2 * m

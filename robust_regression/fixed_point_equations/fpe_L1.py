@@ -60,7 +60,7 @@ def var_hat_func_L1_double_noise(m, q, sigma, alpha, delta_in, delta_out, percen
     return m_hat, q_hat, sigma_hat
 
 
-@njit(error_model="numpy", fastmath=True)
+# @njit(error_model="numpy", fastmath=True)
 def var_hat_func_L1_decorrelated_noise(
     m, q, sigma, alpha, delta_in, delta_out, percentage, beta
 ):

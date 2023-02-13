@@ -71,16 +71,14 @@ def var_hat_func_L2_double_noise(m, q, sigma, alpha, delta_in, delta_out, percen
     return m_hat, q_hat, sigma_hat
 
 
-@njit(error_model="numpy", fastmath=True)
+# @njit(error_model="numpy", fastmath=True)
 def var_hat_func_L2_decorrelated_noise(m, q, sigma, alpha, delta_in, delta_out, percentage, beta):
     delta_eff = (1 - percentage) * delta_in + percentage * delta_out
     intermediate_val = 1 + percentage * (beta - 1)
 
     m_hat = alpha * intermediate_val / (1 + sigma)
     q_hat = (
-        alpha
-        * (1 + q + delta_eff + percentage * (beta**2 - 1) - 2 * abs(m) * intermediate_val)
-        / ((1 + sigma) ** 2)
+        alpha * (1 + q + delta_eff + percentage * (beta**2 - 1) - 2 * abs(m) * intermediate_val) / ((1 + sigma) ** 2)
     )
     sigma_hat = alpha / (1 + sigma)
     return m_hat, q_hat, sigma_hat

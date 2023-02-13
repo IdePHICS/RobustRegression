@@ -1,4 +1,6 @@
 import numpy as np
+from numpy import pi
+from math import exp, sqrt
 from numpy.random import random
 from numba import njit
 from ..utils.integration_utils import x_ge, w_ge
@@ -7,46 +9,62 @@ from ..utils.errors import ConvergenceError
 from ..aux_functions.misc import damped_update
 
 
-def GAMP_algorithm(f_w, Df_w, f_out, Df_out, ys, xs, f_w_args, f_out_args):
-    _, d = xs.shape
+def GAMP_algorithm_unsimplified(
+    f_w : callable,
+    Df_w : callable,
+    f_out : callable,
+    Df_out : callable,
+    ys : np.ndarray,
+    xs : np.ndarray,
+    f_w_args : tuple,
+    f_out_args : tuple,
+    init_w_hat,
+    abs_tol=TOL_GAMP,
+    max_iter=MAX_ITER_GAMP,
+    blend=BLEND_GAMP
+):
+    n, d = xs.shape
 
     # random init
-    w_hat_t = 0.1 * random(d) + 0.95
-    c_w_t = 0.5 * random(d) + 0.05
+    w_hat_t = init_w_hat  # 0.1 * random(d) + 0.95
+    c_w_t = 0.1 * random(d) + 0.01
     # probably different dimension
-    f_out_t_1 = 0.5 * random(d) + 0.05
+    f_out_t_1 = 0.5 * random(n) + 0.001
 
-    F = xs / np.sqrt(d)
+    # print(w_hat_t.shape, c_w_t.shape, f_out_t_1.shape, xs.shape)
+
+    F = xs / sqrt(d)
     F2 = F**2
 
     err = 1.0
     iter_nb = 0
-    while err > TOL_GAMP:
+    while err > abs_tol:
         V_t = F2 @ c_w_t
         omega_t = F @ w_hat_t - V_t * f_out_t_1
 
         f_out_t = f_out(ys, omega_t, V_t, *f_out_args)
         Df_out_t = Df_out(ys, omega_t, V_t, *f_out_args)
 
-        Lambda_t = Df_out_t @ F2
-        gamma_t = F @ f_out_t + Lambda_t * w_hat_t
+        Lambda_t = -Df_out_t @ F2
+        gamma_t = f_out_t @ F + Lambda_t * w_hat_t
 
         new_w_hat_t = f_w(gamma_t, Lambda_t, *f_w_args)
         new_c_w_t = Df_w(gamma_t, Lambda_t, *f_w_args)
 
         err = max(np.max(np.abs(new_w_hat_t - w_hat_t)), np.max(np.abs(new_c_w_t - c_w_t)))
 
-        w_hat_t = damped_update(new_w_hat_t, w_hat_t, BLEND_GAMP)
-        c_w_t = damped_update(new_c_w_t, c_w_t, BLEND_GAMP)
+        w_hat_t = damped_update(new_w_hat_t, w_hat_t, blend)
+        c_w_t = damped_update(new_c_w_t, c_w_t, blend)
 
         iter_nb += 1
-        if iter_nb > MAX_ITER_GAMP:
+        if iter_nb > max_iter:
             raise ConvergenceError("GAMP_algorithm", iter_nb)
 
     return w_hat_t
 
 
-@njit(error_model="numpy", fastmath=True)
+# to be changed
+# @njit(error_model="numpy")
 def find_coefficients_AMP(input_funs, output_funs, ys, xs, *noise_args):
     _, d = xs.shape
 
@@ -54,7 +72,7 @@ def find_coefficients_AMP(input_funs, output_funs, ys, xs, *noise_args):
     v_t_1 = 0.5 * np.random.rand(d) + 0.01
     gout_t_1 = 0.5 * np.random.rand(1) + 0.001
 
-    F = xs / np.sqrt(d)
+    F = xs / sqrt(d)
     F2 = F**2
 
     err = 1.0
@@ -78,9 +96,9 @@ def find_coefficients_AMP(input_funs, output_funs, ys, xs, *noise_args):
     return a_t  # , v_t
 
 
-@njit(error_model="numpy", fastmath=True)
+@njit(error_model="numpy")
 def gaussian_prior(x):
-    return np.exp(-0.5 * x**2) / np.sqrt(2 * np.pi)
+    return exp(-0.5 * x**2) / sqrt(2 * pi)
 
 
 @njit(error_model="numpy")
@@ -89,8 +107,8 @@ def input_functions_gaussian_prior(Rs, sigmas):
     fv = np.empty_like(sigmas)
 
     for idx, (sigma, R) in enumerate(zip(sigmas, Rs)):
-        z = np.sqrt(2.0) * np.sqrt(sigma) * x_ge + R
-        jacobian = np.sqrt(2.0) * np.sqrt(sigma)
+        z = sqrt(2.0) * sqrt(sigma) * x_ge + R
+        jacobian = sqrt(2.0) * sqrt(sigma)
 
         simple_int = np.sum(w_ge * jacobian * gaussian_prior(z))
         fa[idx] = np.sum(w_ge * jacobian * gaussian_prior(z) * z) / (simple_int)
@@ -104,9 +122,9 @@ def input_functions_gaussian_prior(Rs, sigmas):
     return fa, fv
 
 
-@njit(error_model="numpy", fastmath=True)
+@njit(error_model="numpy")
 def likelihood_single_gaussians(y, z, delta):
-    return np.exp(-0.5 * (y - z) ** 2 / delta) / (np.sqrt(2 * np.pi * delta))
+    return exp(-0.5 * (y - z) ** 2 / delta) / (sqrt(2 * pi * delta))
 
 
 @njit(error_model="numpy")
@@ -115,8 +133,8 @@ def output_functions_single_noise(ys, omegas, Vs, delta):
     Dgout = np.empty_like(ys)
 
     for idx, (y, omega, V) in enumerate(zip(ys, omegas, Vs)):
-        z = np.sqrt(2.0) * np.sqrt(V) * x_ge + omega
-        jacobian = np.sqrt(2.0) * np.sqrt(V)
+        z = sqrt(2.0) * sqrt(V) * x_ge + omega
+        jacobian = sqrt(2.0) * sqrt(V)
 
         simple_int = np.sum(w_ge * jacobian * likelihood_single_gaussians(y, z, delta))
         gout[idx] = np.sum(
@@ -131,11 +149,11 @@ def output_functions_single_noise(ys, omegas, Vs, delta):
     return gout, Dgout
 
 
-@njit(error_model="numpy", fastmath=True)
+@njit(error_model="numpy")
 def likelihood_double_gaussians(y, z, delta_in, delta_out, eps):
-    return (1 - eps) / (np.sqrt(2 * np.pi * delta_in)) * np.exp(
-        -0.5 * (y - z) ** 2 / (delta_in)
-    ) + eps / (np.sqrt(2 * np.pi * delta_out)) * np.exp(-0.5 * (y - z) ** 2 / (delta_out))
+    return (1 - eps) / (sqrt(2 * pi * delta_in)) * exp(-0.5 * (y - z) ** 2 / (delta_in)) + eps / (
+        sqrt(2 * pi * delta_out)
+    ) * exp(-0.5 * (y - z) ** 2 / (delta_out))
 
 
 @njit(error_model="numpy")
@@ -144,8 +162,8 @@ def output_functions_double_noise(ys, omegas, Vs, delta_in, delta_out, eps):
     Dgout = np.empty_like(ys)
 
     for idx, (y, omega, V) in enumerate(zip(ys, omegas, Vs)):
-        z = np.sqrt(2.0) * np.sqrt(V) * x_ge + omega
-        jacobian = np.sqrt(2.0) * np.sqrt(V)
+        z = sqrt(2.0) * sqrt(V) * x_ge + omega
+        jacobian = sqrt(2.0) * sqrt(V)
 
         simple_int = np.sum(
             w_ge * jacobian * likelihood_double_gaussians(y, z, delta_in, delta_out, eps)
@@ -168,15 +186,13 @@ def output_functions_double_noise(ys, omegas, Vs, delta_in, delta_out, eps):
     return gout, Dgout
 
 
-@njit(error_model="numpy", fastmath=True)
+@njit(error_model="numpy")
 def likelihood_decorrelated_gaussians(
     y: float, z: float, delta_in: float, delta_out: float, eps: float, beta: float
 ) -> float:
-    return (1 - eps) / (np.sqrt(2 * np.pi * delta_in)) * np.exp(
-        -0.5 * (y - z) ** 2 / (delta_in)
-    ) + eps / (np.sqrt(2 * np.pi * delta_out)) * np.exp(
-        -0.5 * (y - beta * z) ** 2 / (delta_out)
-    )
+    return (1 - eps) / (sqrt(2 * pi * delta_in)) * exp(-0.5 * (y - z) ** 2 / (delta_in)) + eps / (
+        sqrt(2 * pi * delta_out)
+    ) * exp(-0.5 * (y - beta * z) ** 2 / (delta_out))
 
 
 @njit(error_model="numpy")
@@ -185,8 +201,8 @@ def output_functions_decorrelated_noise(ys, omegas, Vs, delta_in, delta_out, eps
     Dgout = np.empty_like(ys)
 
     for idx, (y, omega, V) in enumerate(zip(ys, omegas, Vs)):
-        z = np.sqrt(2.0) * np.sqrt(V) * x_ge + omega
-        jacobian = np.sqrt(2.0) * np.sqrt(V)
+        z = sqrt(2.0) * sqrt(V) * x_ge + omega
+        jacobian = sqrt(2.0) * sqrt(V)
 
         simple_int = np.sum(
             w_ge

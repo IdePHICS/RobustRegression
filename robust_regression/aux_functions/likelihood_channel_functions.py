@@ -50,28 +50,15 @@ def f_out_Bayes_decorrelated_noise(
     eps: float,
     beta: float,
 ) -> float:
-    exp_in = ((y - omega) ** 2) / (2 * (V + delta_in))
-    exp_out = ((y - beta * omega) ** 2) / (2 * (beta**2 * V + delta_out))
-
-    if exp_in > exp_out:
-        return (
-            (y - omega) * (1 - eps) / pow(V + delta_in, 1.5)
-            + (eps * beta)
-            * (y - beta * omega)
-            * exp(-exp_out + exp_in)
-            / pow(beta**2 * V + delta_out, 1.5)
-        ) / (
-            (1 - eps) / pow(V + delta_in, 0.5)
-            + eps * exp(-exp_out + exp_in) / pow(beta**2 * V + delta_out, 0.5)
-        )
-    else:
-        return (
-            (y - omega) * (1 - eps) * exp(-exp_in + exp_out) / pow(V + delta_in, 1.5)
-            + (eps * beta) * (y - beta * omega) / pow(beta**2 * V + delta_out, 1.5)
-        ) / (
-            (1 - eps) * exp(-exp_in + exp_out) / pow(V + delta_in, 0.5)
-            + eps / pow(beta**2 * V + delta_out, 0.5)
-        )
+    exp_in = exp(-((y - omega) ** 2) / (2 * (V + delta_in)))
+    exp_out = exp(-((y - beta * omega) ** 2) / (2 * (beta**2 * V + delta_out)))
+    return (
+        (y - omega) * (1 - eps) * exp_in / pow(V + delta_in, 3 / 2)
+        + eps * beta * (y - beta * omega) * exp_out / pow(beta**2 * V + delta_out, 3 / 2)
+    ) / (
+        (1 - eps) * exp_in / pow(V + delta_in, 1 / 2)
+        + eps * exp_out / pow(beta**2 * V + delta_out, 1 / 2)
+    )
 
 
 @vectorize("float64(float64, float64, float64, float64, float64, float64, float64)")
@@ -86,33 +73,21 @@ def Df_out_Bayes_decorrelated_noise(
 ) -> float:
     f_out_2 = -f_out_Bayes_decorrelated_noise(y, omega, V, delta_in, delta_out, eps, beta) ** 2
 
-    exp_in = ((y - omega) ** 2) / (2 * (V + delta_in))
-    exp_out = ((y - beta * omega) ** 2) / (2 * (beta**2 * V + delta_out))
+    exp_in = exp(-((y - omega) ** 2) / (2 * (V + delta_in)))
+    exp_out = exp(-((y - beta * omega) ** 2) / (2 * (beta**2 * V + delta_out)))
 
-    if exp_in > exp_out:
-        return f_out_2 + (
-            (1 - eps) * (y - omega) ** 2 / pow(V + delta_in, 2.5)
-            + exp(-exp_out + exp_in)
-            * (y - beta * omega) ** 2
-            * beta**2
-            * eps
-            / pow(V * beta**2 + delta_out, 2.5)
-            - (1 - eps) / pow(V + delta_in, 1.5)
-            - exp(-exp_out + exp_in) * beta**2 * eps / pow(V * beta**2 + delta_out, 1.5)
-        ) / (
-            (1 - eps) / pow(V + delta_in, 0.5)
-            + eps * exp(-exp_out + exp_in) / pow(beta**2 * V + delta_out, 0.5)
-        )
-    else:
-        return f_out_2 + (
-            (1 - eps) * exp(-exp_in + exp_out) * (y - omega) ** 2 / pow(V + delta_in, 2.5)
-            + (y - beta * omega) ** 2 * beta**2 * eps / pow(V * beta**2 + delta_out, 2.5)
-            - (1 - eps) * exp(-exp_in + exp_out) / pow(V + delta_in, 1.5)
-            - beta**2 * eps / pow(V * beta**2 + delta_out, 1.5)
-        ) / (
-            (1 - eps) * exp(-exp_in + exp_out) / pow(V + delta_in, 0.5)
-            + eps / pow(beta**2 * V + delta_out, 0.5)
-        )
+    return f_out_2 + (
+        (1 - eps) * (y - omega) ** 2 * exp(-exp_in) / pow(V + delta_in, 2.5)
+        + exp(-exp_out)
+        * (y - beta * omega) ** 2
+        * (beta**2 * eps)
+        / pow(V * beta**2 + delta_out, 2.5)
+        - (1 - eps) * exp(-exp_in) / pow(V + delta_in, 1.5)
+        - exp(-exp_out) * beta**2 * eps / pow(V * beta**2 + delta_out, 1.5)
+    ) / (
+        (1 - eps) * exp(-exp_in) / pow(V + delta_in, 0.5)
+        + eps * exp(-exp_out) / pow(beta**2 * V + delta_out, 0.5)
+    )
 
 
 # -----------------------------------
@@ -133,7 +108,15 @@ def Df_out_L2(y: float, omega: float, V: float) -> float:
 
 @vectorize("float64(float64, float64, float64)")
 def f_out_L1(y: float, omega: float, V: float) -> float:
-    return (y - omega + sign(omega - y) * max(abs(omega - y) - V, 0.0)) / V
+    # return (y - omega + sign(omega - y) * max(abs(omega - y) - V, 0.0)) / V
+    if abs(omega - y) > V:
+        if omega - y > 0.0:
+            return 1.0
+        else:
+            return -1.0
+        # return sign(omega - y)
+    else:
+        return (y - omega) / V
 
 
 @vectorize(["float64(float64, float64, float64)"])

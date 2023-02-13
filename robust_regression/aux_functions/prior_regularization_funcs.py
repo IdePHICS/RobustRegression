@@ -29,21 +29,15 @@ def Z_w_Bayes_sparse_binary_weights(gamma: float, Lambda: float, rho: float) -> 
 
 @vectorize("float64(float64, float64, float64)")
 def f_w_Bayes_sparse_binary_weights(gamma: float, Lambda: float, rho: float) -> float:
-    return (
-        exp(-Lambda / 2)
-        * (1 - rho)
-        * sinh(gamma)
-        / (rho + exp(-Lambda / 2) * (1 - rho) * cosh(gamma))
+    return (exp(-Lambda / 2) * (1 - rho) * sinh(gamma)) / (
+        rho + exp(-Lambda / 2) * (1 - rho) * cosh(gamma)
     )
 
 
 @vectorize("float64(float64, float64, float64)")
 def Df_w_Bayes_sparse_binary_weights(gamma: float, Lambda: float, rho: float) -> float:
-    return (
-        exp(-Lambda / 2)
-        * (1 - rho)
-        * cosh(gamma)
-        / (rho + exp(-Lambda / 2) * (1 - rho) * cosh(gamma))
+    return (exp(-Lambda / 2) * (1 - rho) * cosh(gamma)) / (
+        rho + exp(-Lambda / 2) * (1 - rho) * cosh(gamma)
     )
 
 

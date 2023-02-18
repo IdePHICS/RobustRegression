@@ -1,6 +1,7 @@
-from numpy import logspace, empty
+from numpy import logspace, linspace, empty, nan
 from math import log10
 from typing import Tuple
+from ..utils.errors import ConvergenceError
 from ..fixed_point_equations.fpeqs import fixed_point_finder
 from ..aux_functions.misc import gen_error
 from ..fixed_point_equations import SMALLEST_REG_PARAM, SMALLEST_HUBER_PARAM
@@ -44,6 +45,7 @@ def sweep_alpha_fixed_point(
         else logspace(log10(alpha_max), log10(alpha_min), n_alpha_pts)
     )
     out_list = [empty(n_alpha_pts) for _ in range(n_observables)]
+    # this is not needed
     ms_qs_sigmas = empty((n_alpha_pts, 3))
 
     old_initial_cond = initial_cond_fpe
@@ -237,3 +239,162 @@ def sweep_alpha_optimal_lambda_hub_param_fixed_point(
             funs_values[idx] = fun_vals[::-1]
 
     return alphas, f_min_vals, (reg_params_opt, hub_params_opt), funs_values
+
+
+# ------------------- #
+
+
+def sweep_alpha_descend_lambda(
+    var_func,
+    var_hat_func,
+    alpha_min: float,
+    alpha_max: float,
+    n_alpha_pts: int,
+    lambda_min: float,
+    lambda_max: float,
+    n_lambda_pts: int,
+    var_func_kwargs: dict,
+    var_hat_func_kwargs: dict,
+    funs=[gen_error],
+    funs_args=[list()],
+    initial_cond_fpe=(0.6, 0.01, 0.9),
+):
+    if alpha_min > alpha_max:
+        raise ValueError(
+            "alpha_min should be smaller than alpha_max, in this case are {:f} and {:f}".format(
+                alpha_min, alpha_max
+            )
+        )
+
+    if lambda_min > lambda_max:
+        raise ValueError(
+            "lambda_min should be smaller than lambda_max, in this case are {:f} and {:f}".format(
+                lambda_min, lambda_max
+            )
+        )
+
+    alphas = logspace(log10(alpha_min), log10(alpha_max), n_alpha_pts)
+    reg_params = linspace(lambda_min, lambda_max, n_lambda_pts)
+    funs_vals = [empty((n_lambda_pts, n_alpha_pts)) for _ in range(len(funs))]
+
+    copy_var_func_kwargs = var_func_kwargs.copy()
+    copy_var_hat_func_kwargs = var_hat_func_kwargs.copy()
+    old_initial_cond = initial_cond_fpe
+    first_inital_cond_column = initial_cond_fpe
+    for idx, alpha in enumerate(alphas):
+        copy_var_hat_func_kwargs.update({"alpha": alpha})
+        old_initial_cond = first_inital_cond_column
+
+        already_brokern = False
+        for jdx, reg_param in enumerate(reg_params[::-1]):
+            copy_var_func_kwargs.update({"reg_param": reg_param})
+
+            # if reg_param <= min(0,1-alpha):
+            #     for kdx, (f, f_args) in enumerate(zip(funs, funs_args)):
+            #         funs_vals[kdx][n_lambda_pts - 1 - jdx, idx] = nan
+            #     continue
+
+            if already_brokern:
+                for kdx, (f, f_args) in enumerate(zip(funs, funs_args)):
+                    funs_vals[kdx][n_lambda_pts - 1 - jdx, idx] = nan
+                continue
+
+            try:
+                m, q, sigma = fixed_point_finder(
+                    var_func,
+                    var_hat_func,
+                    old_initial_cond,
+                    copy_var_func_kwargs,
+                    copy_var_hat_func_kwargs,
+                )
+                old_initial_cond = tuple([m, q, sigma])
+
+                if jdx == 0:
+                    first_inital_cond_column = old_initial_cond
+
+                for kdx, (f, f_args) in enumerate(zip(funs, funs_args)):
+                    funs_vals[kdx][n_lambda_pts - 1 - jdx, idx] = f(m, q, sigma, *f_args)
+
+            except ConvergenceError as e:
+                for kdx, (f, f_args) in enumerate(zip(funs, funs_args)):
+                    funs_vals[kdx][n_lambda_pts - 1 - jdx, idx] = nan
+
+                already_brokern = True
+                continue
+
+    return (alphas, reg_params), funs_vals
+
+
+def sweep_alpha_minimal_stable_reg_param(
+    var_func,
+    var_hat_func,
+    alpha_min: float,
+    alpha_max: float,
+    n_alpha_pts: int,
+    var_func_kwargs: dict,
+    var_hat_func_kwargs: dict,
+    initial_cond_fpe=(0.6, 0.01, 0.9),
+    decreasing=False,
+    bounds_reg_param_search=(-10.0, 0.01),
+    points_per_run=100,
+):
+    if alpha_min > alpha_max:
+        raise ValueError(
+            "alpha_min should be smaller than alpha_max, in this case are {:f} and {:f}".format(
+                alpha_min, alpha_max
+            )
+        )
+
+    if bounds_reg_param_search[0] > bounds_reg_param_search[1]:
+        raise ValueError(
+            "bounds_reg_param_search[0] should be smaller than bounds_reg_param_search[1], in this case are {:f} and {:f}".format(
+                bounds_reg_param_search[0], bounds_reg_param_search[1]
+            )
+        )
+
+    if bounds_reg_param_search[1] <= 0.0:
+        raise ValueError(
+            "bounds_reg_param_search[1] should be larger than 0.0, in this case is {:f}".format(
+                bounds_reg_param_search[1]
+            )
+        )
+
+    alphas = (
+        logspace(log10(alpha_min), log10(alpha_max), n_alpha_pts)
+        if not decreasing
+        else logspace(log10(alpha_max), log10(alpha_min), n_alpha_pts)
+    )
+    last_reg_param_stable = empty(n_alpha_pts)
+
+    copy_var_func_kwargs = var_func_kwargs.copy()
+    copy_var_hat_func_kwargs = var_hat_func_kwargs.copy()
+    old_initial_cond = initial_cond_fpe
+    for idx, alpha in enumerate(alphas):
+        copy_var_hat_func_kwargs.update({"alpha": alpha})
+
+        not_converged_idx = 0
+        reg_params_test = linspace(
+            bounds_reg_param_search[0], bounds_reg_param_search[1], points_per_run
+        )
+        for jdx, reg_param in enumerate(reg_params_test[::-1]):
+            copy_var_func_kwargs.update({"reg_param": reg_param})
+            try:
+                m, q, sigma = fixed_point_finder(
+                    var_func,
+                    var_hat_func,
+                    old_initial_cond,
+                    copy_var_func_kwargs,
+                    copy_var_hat_func_kwargs,
+                )
+                old_initial_cond = tuple([m, q, sigma])
+            except ConvergenceError:
+                not_converged_idx = points_per_run - 1 - jdx
+                break
+
+        last_reg_param_stable[idx] = reg_params_test[not_converged_idx]
+
+    if decreasing:
+        alphas = alphas[::-1]
+        last_reg_param_stable = last_reg_param_stable[::-1]
+
+    return alphas, last_reg_param_stable

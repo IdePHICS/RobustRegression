@@ -1,5 +1,6 @@
-from numpy import logspace, linspace, empty
+from numpy import logspace, linspace, empty, nan
 from math import log10
+from ..utils.errors import ConvergenceError
 from ..aux_functions.misc import gen_error
 from ..fixed_point_equations.fpeqs import fixed_point_finder
 
@@ -45,30 +46,44 @@ def sweep_reg_param_fixed_point(
         reg_params = (
             linspace(reg_param_min, reg_param_max, n_reg_param_pts)
             if not decreasing
-            else linspace(reg_param_min, reg_param_max, n_reg_param_pts)
+            else linspace(reg_param_max, reg_param_min, n_reg_param_pts)
         )
     else:
         reg_params = (
             logspace(log10(reg_param_min), log10(reg_param_max), n_reg_param_pts)
             if not decreasing
-            else logspace(log10(reg_param_min), log10(reg_param_max), n_reg_param_pts)
+            else logspace(log10(reg_param_max), log10(reg_param_min), n_reg_param_pts)
         )
     out_list = [empty(n_reg_param_pts) for _ in range(n_observables)]
 
     copy_var_func_kwargs = var_func_kwargs.copy()
 
+    not_converged_flag = False
     old_initial_cond = initial_cond
     for idx, reg_param in enumerate(reg_params):
         copy_var_func_kwargs.update({"reg_param": reg_param})
+        try:
+            if not_converged_flag:
+                for jdx, (f, f_args) in enumerate(zip(funs, funs_args)):
+                    out_list[jdx][idx] = nan
+            else:
+                m, q, sigma = fixed_point_finder(
+                    var_func,
+                    var_hat_func,
+                    old_initial_cond,
+                    copy_var_func_kwargs,
+                    var_hat_func_kwargs,
+                )
 
-        m, q, sigma = fixed_point_finder(
-            var_func, var_hat_func, old_initial_cond, copy_var_func_kwargs, var_hat_func_kwargs
-        )
+                old_initial_cond = tuple([m, q, sigma])
 
-        old_initial_cond = tuple([m, q, sigma])
+                for jdx, (f, f_args) in enumerate(zip(funs, funs_args)):
+                    out_list[jdx][idx] = f(m, q, sigma, *f_args)
 
-        for jdx, (f, f_args) in enumerate(zip(funs, funs_args)):
-            out_list[jdx][idx] = f(m, q, sigma, *f_args)
+        except ConvergenceError:
+            not_converged_flag = True
+            for jdx, (f, f_args) in enumerate(zip(funs, funs_args)):
+                out_list[jdx][idx] = nan
 
     if decreasing:
         reg_params = reg_params[::-1]

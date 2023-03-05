@@ -38,6 +38,9 @@ def sweep_alpha_fixed_point(
             )
         )
 
+    if alpha_min <= 0:
+        raise ValueError("alpha_min should be positive, in this case is {:f}".format(alpha_min))
+
     n_observables = len(funs)
     alphas = (
         logspace(log10(alpha_min), log10(alpha_max), n_alpha_pts)
@@ -97,6 +100,9 @@ def sweep_alpha_optimal_lambda_fixed_point(
                 alpha_min, alpha_max
             )
         )
+
+    if alpha_min <= 0:
+        raise ValueError("alpha_min should be positive, in this case is {:f}".format(alpha_min))
 
     n_observables = len(funs)
     alphas = (
@@ -183,6 +189,9 @@ def sweep_alpha_optimal_lambda_hub_param_fixed_point(
             )
         )
 
+    if alpha_min <= 0:
+        raise ValueError("alpha_min should be positive, in this case is {:f}".format(alpha_min))
+
     n_observables = len(funs)
     alphas = (
         logspace(log10(alpha_min), log10(alpha_max), n_alpha_pts)
@@ -266,10 +275,20 @@ def sweep_alpha_descend_lambda(
             )
         )
 
+    if alpha_min <= 0:
+        raise ValueError("alpha_min should be positive, in this case is {:f}".format(alpha_min))
+
     if lambda_min > lambda_max:
         raise ValueError(
             "lambda_min should be smaller than lambda_max, in this case are {:f} and {:f}".format(
                 lambda_min, lambda_max
+            )
+        )
+
+    if len(funs) != len(funs_args):
+        raise ValueError(
+            "The length of funs and funs_args should be the same, in this case is {:d} and {:d}".format(
+                len(funs), len(funs_args)
             )
         )
 
@@ -322,6 +341,12 @@ def sweep_alpha_descend_lambda(
                 already_brokern = True
                 continue
 
+            except ValueError:
+                for kdx, (f, f_args) in enumerate(zip(funs, funs_args)):
+                    funs_vals[kdx][n_lambda_pts - 1 - jdx, idx] = nan
+
+                already_brokern = True
+                continue
     return (alphas, reg_params), funs_vals
 
 
@@ -331,12 +356,13 @@ def sweep_alpha_minimal_stable_reg_param(
     alpha_min: float,
     alpha_max: float,
     n_alpha_pts: int,
+    condition_func,
     var_func_kwargs: dict,
     var_hat_func_kwargs: dict,
     initial_cond_fpe=(0.6, 0.01, 0.9),
     decreasing=False,
     bounds_reg_param_search=(-10.0, 0.01),
-    points_per_run=100,
+    points_per_run=1000,
 ):
     if alpha_min > alpha_max:
         raise ValueError(
@@ -344,6 +370,9 @@ def sweep_alpha_minimal_stable_reg_param(
                 alpha_min, alpha_max
             )
         )
+    
+    if alpha_min <= 0:
+        raise ValueError("alpha_min should be positive, in this case is {:f}".format(alpha_min))
 
     if bounds_reg_param_search[0] > bounds_reg_param_search[1]:
         raise ValueError(
@@ -376,8 +405,10 @@ def sweep_alpha_minimal_stable_reg_param(
         reg_params_test = linspace(
             bounds_reg_param_search[0], bounds_reg_param_search[1], points_per_run
         )
+
         for jdx, reg_param in enumerate(reg_params_test[::-1]):
             copy_var_func_kwargs.update({"reg_param": reg_param})
+
             try:
                 m, q, sigma = fixed_point_finder(
                     var_func,
@@ -387,7 +418,15 @@ def sweep_alpha_minimal_stable_reg_param(
                     copy_var_hat_func_kwargs,
                 )
                 old_initial_cond = tuple([m, q, sigma])
-            except ConvergenceError:
+
+                if condition_func(m,q,sigma,**copy_var_func_kwargs, **copy_var_hat_func_kwargs) <= 0.0:
+                    not_converged_idx = points_per_run - 1 - jdx
+                    break
+
+            except ConvergenceError as e:
+                not_converged_idx = points_per_run - 1 - jdx
+                break
+            except ValueError as e:
                 not_converged_idx = points_per_run - 1 - jdx
                 break
 

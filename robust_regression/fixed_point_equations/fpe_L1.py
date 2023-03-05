@@ -37,6 +37,7 @@ def var_hat_func_L1_double_noise(m, q, sigma, alpha, delta_in, delta_out, percen
     small_erf = sigma / sqrt(2 * small_sqrt)
     large_erf = sigma / sqrt(2 * large_sqrt)
 
+    # probabily should change it
     m_hat = (alpha / sigma) * ((1 - percentage) * erf(small_erf) + percentage * erf(large_erf))
     q_hat = alpha * (
         (1 - percentage) * erfc(small_erf) + percentage * erfc(large_erf)

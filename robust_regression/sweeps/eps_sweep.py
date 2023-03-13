@@ -147,7 +147,6 @@ def sweep_eps_optimal_lambda_fixed_point(
         for jdx in range(n_observables):
             funs_values[jdx][idx] = out_values[jdx]
 
-    # change this
     if decreasing:
         epsilons = epsilons[::-1]
         f_min_vals = f_min_vals[::-1]
@@ -238,7 +237,6 @@ def sweep_eps_optimal_lambda_hub_param_fixed_point(
         for jdx in range(n_observables):
             funs_values[jdx][idx] = out_values[jdx]
 
-    #  to be checked
     if decreasing:
         epsilons = epsilons[::-1]
         f_min_vals = f_min_vals[::-1]

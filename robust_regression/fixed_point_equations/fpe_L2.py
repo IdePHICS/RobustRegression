@@ -3,7 +3,7 @@ from numba import njit
 
 
 @njit(error_model="numpy", fastmath=True)
-def order_parameters_L2(alpha, reg_param, delta_in, delta_out, percentage, beta, a):
+def order_parameters_L2(alpha, reg_param, delta_in, delta_out, percentage, beta):
 
     delta_eff = (1 - percentage) * delta_in + percentage * delta_out
     t = sqrt((alpha + reg_param - 1) ** 2 + 4 * reg_param)

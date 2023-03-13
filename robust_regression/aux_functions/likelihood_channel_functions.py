@@ -3,7 +3,7 @@ from numpy import pi, sign
 from math import exp, sqrt, pow
 
 
-@vectorize("float64(float64, float64, float64, float64, float64, float64, float64)")
+# @vectorize("float64(float64, float64, float64, float64, float64, float64, float64)")
 def Z_out_Bayes_decorrelated_noise(
     y: float,
     omega: float,

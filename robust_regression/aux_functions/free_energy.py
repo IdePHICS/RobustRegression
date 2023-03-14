@@ -1,3 +1,4 @@
+from typing import Tuple
 from numpy import pi
 from math import sqrt, exp, erf, erfc
 from numba import njit
@@ -5,7 +6,17 @@ from numba import njit
 
 @njit
 def free_energy(
-    Psi_w, Psi_out, alpha, m, q, sigma, m_hat, q_hat, sigma_hat, Psi_w_args=(), Psi_out_args=()
+    Psi_w,
+    Psi_out,
+    alpha: float,
+    m: float,
+    q: float,
+    sigma: float,
+    m_hat: float,
+    q_hat: float,
+    sigma_hat: float,
+    Psi_w_args: Tuple = (),
+    Psi_out_args: Tuple = (),
 ):
     Q_hat = sigma_hat - q_hat
     Q = sigma + q
@@ -18,14 +29,16 @@ def free_energy(
 
 
 @njit
-def Psi_w_l2_reg(Q_hat, m_hat, q_hat, reg_param):
+def Psi_w_l2_reg(Q_hat: float, m_hat: float, q_hat: float, reg_param: float) -> float:
     reg_param_combination = Q_hat + q_hat + reg_param
     return 0.5 * ((q_hat + m_hat**2) / reg_param_combination)
     # return 0.5 * ((q_hat + m_hat**2) / reg_param_combination - log(reg_param_combination))
 
 
 @njit
-def Psi_out_L2(Q, m, q, delta_in, delta_out, percentage, beta):
+def Psi_out_L2(
+    Q: float, m: float, q: float, delta_in: float, delta_out: float, percentage: float, beta: float
+) -> float:
     sigma = Q - q
     return (
         1
@@ -38,7 +51,9 @@ def Psi_out_L2(Q, m, q, delta_in, delta_out, percentage, beta):
 
 
 @njit
-def Psi_out_L1(Q, m, q, delta_in, delta_out, percentage, beta):
+def Psi_out_L1(
+    Q: float, m: float, q: float, delta_in: float, delta_out: float, percentage: float, beta: float
+) -> float:
     sigma = Q - q
     comb_in = 1 - 2 * m + q + delta_in
     comb_out = q - 2 * m * beta + beta**2 + delta_out
@@ -72,7 +87,16 @@ def Psi_out_L1(Q, m, q, delta_in, delta_out, percentage, beta):
 
 
 @njit
-def Psi_out_Huber(Q, m, q, delta_in, delta_out, percentage, beta, a):
+def Psi_out_Huber(
+    Q: float,
+    m: float,
+    q: float,
+    delta_in: float,
+    delta_out: float,
+    percentage: float,
+    beta: float,
+    a: float,
+) -> float:
     sigma = Q - q
     comb_in = 1 - 2 * m + q + delta_in
     comb_out = q - 2 * m * beta + beta**2 + delta_out

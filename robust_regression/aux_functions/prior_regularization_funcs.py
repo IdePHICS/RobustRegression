@@ -78,3 +78,20 @@ def Df_w_L1_regularization(gamma: float, Lambda: float, reg_param: float) -> flo
         return 1 / Lambda
     else:
         return 0.0
+
+# -------------------------
+
+@vectorize("float64(float64, float64, float64)")
+def Z_w_L2_regularization(gamma: float, Lambda: float, reg_param: float) -> float:
+    return exp((gamma**2 * Lambda) / (2 * (reg_param + Lambda) ** 2))
+
+
+@vectorize("float64(float64, float64, float64)")
+def f_w_L2_regularization(gamma: float, Lambda: float, reg_param: float) -> float:
+    return gamma / (reg_param + Lambda)
+
+
+@vectorize("float64(float64, float64, float64)")
+def Df_w_L2_regularization(gamma: float, Lambda: float, reg_param: float) -> float:
+    return 1.0 / (reg_param + Lambda)
+

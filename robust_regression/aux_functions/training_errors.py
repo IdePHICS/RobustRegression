@@ -1,24 +1,84 @@
 import numpy as np
-from math import sqrt, log
+from numpy import pi
+from math import sqrt, log, exp, erfc, erf
 
 from scipy.integrate import dblquad
 from numba import njit
 
+
 @njit
 def training_error_ridge(m, q, sigma, reg_param, alpha, delta_in, delta_out, percentage, beta):
-    return reg_param / (2 * alpha) * q + (
+    return (
         1
         + q
         + delta_in
         - delta_in * percentage
         - 2 * m * (1 + (-1 + beta) * percentage)
         + percentage * (-1 + beta**2 + delta_out)
-    ) / (2 * (1 + sigma) ** 2)
+    ) / (
+        2 * (1 + sigma) ** 2
+    )  # + reg_param / (2 * alpha) * q
 
 
-def training_error_l1(m, q, sigma, reg_param):
-    raise NotImplementedError
+# @njit
+def training_error_l1(m, q, sigma, reg_param, alpha, delta_in, delta_out, percentage, beta):
+    return (
+        sqrt(2 / pi)
+        * (
+            -(
+                (sqrt(1.0 - 2.0 * m + q + delta_in) * (-1 + percentage))
+                / exp(sigma**2 / (2.0 * (1.0 - 2.0 * m + q + delta_in)))
+            )
+            + (percentage * sqrt(q - 2 * m * beta + beta**2 + delta_out))
+            / exp(sigma**2 / (2.0 * (q - 2 * m * beta + beta**2 + delta_out)))
+        )
+        + sigma * (-1 + percentage) * erfc(sigma / (sqrt(2) * sqrt(1.0 - 2.0 * m + q + delta_in)))
+        - sigma
+        * percentage
+        * erfc(sigma / (sqrt(2) * sqrt(q - 2 * m * beta + beta**2 + delta_out)))
+    )  # + reg_param / (2 * alpha) * q
 
 
-def training_error_huber(m, q, sigma, reg_param):
-    raise NotImplementedError
+def training_error_huber(m, q, sigma, reg_param, alpha, delta_in, delta_out, percentage, beta, a):
+    return (
+        -(
+            (
+                a
+                * sqrt(2 / pi)
+                * (1 + sigma)
+                * (1 + 2 * sigma)
+                * (
+                    exp(
+                        (
+                            a**2
+                            * (1 + sigma) ** 2
+                            * (
+                                -(1 / (1 - 2 * m + q + delta_in))
+                                + 1 / (q - 2 * m * beta + beta**2 + delta_out)
+                            )
+                        )
+                        / 2.0
+                    )
+                    * sqrt(1 - 2 * m + q + delta_in)
+                    * (-1 + percentage)
+                    - percentage * sqrt(q - 2 * m * beta + beta**2 + delta_out)
+                )
+            )
+            / exp((a**2 * (1 + sigma) ** 2) / (2.0 * (q - 2 * m * beta + beta**2 + delta_out)))
+        )
+        + (
+            1
+            + q
+            + delta_in
+            + 2 * m * (-1 + percentage)
+            - (1 + q + a**2 * (1 + sigma) ** 2 * (1 + 2 * sigma) + delta_in) * percentage
+        )
+        * erf((a * (1 + sigma)) / (sqrt(2) * sqrt(1 - 2 * m + q + delta_in)))
+        + percentage
+        * (q + a**2 * (1 + sigma) ** 2 * (1 + 2 * sigma) - 2 * m * beta + beta**2 + delta_out)
+        * erf((a * (1 + sigma)) / (sqrt(2) * sqrt(q - 2 * m * beta + beta**2 + delta_out)))
+        - a**2
+        * (1 + sigma) ** 2
+        * (1 + 2 * sigma)
+        * erfc((a * (1 + sigma)) / (sqrt(2) * sqrt(1 - 2 * m + q + delta_in)))
+    ) / (2.0 * (1 + sigma) ** 2) # + reg_param / (2 * alpha) * q

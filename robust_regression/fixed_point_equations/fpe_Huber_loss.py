@@ -4,14 +4,6 @@ from math import erf, erfc, exp, log, sqrt
 
 
 @njit(error_model="numpy", fastmath=True)
-def var_func_L2(m_hat, q_hat, sigma_hat, reg_param):
-    m = m_hat / (sigma_hat + reg_param)
-    q = (m_hat**2 + q_hat) / (sigma_hat + reg_param) ** 2
-    sigma = 1.0 / (sigma_hat + reg_param)
-    return m, q, sigma
-
-
-@njit(error_model="numpy", fastmath=True)
 def var_hat_func_Huber_single_noise(m, q, sigma, alpha, delta, a):
     arg_sqrt = 1 + q + delta - 2 * m
     erf_arg = (a * (sigma + 1)) / sqrt(2 * arg_sqrt)

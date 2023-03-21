@@ -3,11 +3,11 @@ from numba import njit
 
 
 @njit(error_model="numpy", fastmath=True)
-def order_parameters_L2(alpha, reg_param, delta_in, delta_out, percentage, beta):
+def order_parameters_ridge(alpha, reg_param, delta_in, delta_out, percentage, beta):
 
     delta_eff = (1 - percentage) * delta_in + percentage * delta_out
     t = sqrt((alpha + reg_param - 1) ** 2 + 4 * reg_param)
-
+    print(t)
     Gamma = 1 + percentage * (beta - 1)
     Lambda = 1 + delta_eff + percentage * (beta**2 - 1)
 
@@ -44,14 +44,6 @@ def order_parameters_L2(alpha, reg_param, delta_in, delta_out, percentage, beta)
     )
 
     return m, q, sigma, m_hat, q_hat, sigma_hat
-
-
-@njit(error_model="numpy", fastmath=True)
-def var_func_L2(m_hat, q_hat, sigma_hat, reg_param):
-    m = m_hat / (sigma_hat + reg_param)
-    q = (m_hat**2 + q_hat) / (sigma_hat + reg_param) ** 2
-    sigma = 1.0 / (sigma_hat + reg_param)
-    return m, q, sigma
 
 
 @njit(error_model="numpy", fastmath=True)

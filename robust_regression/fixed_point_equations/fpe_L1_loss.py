@@ -3,15 +3,7 @@ from numpy import pi
 from math import erf, erfc, exp, log, sqrt
 
 
-@njit(error_model="numpy", fastmath=True)
-def var_func_L2(m_hat, q_hat, sigma_hat, reg_param):
-    m = m_hat / (sigma_hat + reg_param)
-    q = (m_hat**2 + q_hat) / (sigma_hat + reg_param) ** 2
-    sigma = 1.0 / (sigma_hat + reg_param)
-    return m, q, sigma
-
-
-@njit(error_model="numpy", fastmath=True)
+@njit(error_model="numpy", fastmath=False)
 def var_hat_func_L1_single_noise(m, q, sigma, alpha, delta):
     sqrt_arg = 1 + q + delta - 2 * m
     erf_arg = sigma / sqrt(2 * sqrt_arg)
@@ -26,7 +18,7 @@ def var_hat_func_L1_single_noise(m, q, sigma, alpha, delta):
     return m_hat, q_hat, sigma_hat
 
 
-@njit(error_model="numpy", fastmath=True)
+@njit(error_model="numpy", fastmath=False)
 def var_hat_func_L1_double_noise(m, q, sigma, alpha, delta_in, delta_out, percentage):
     small_sqrt = delta_in - 2 * m + q + 1
     large_sqrt = delta_out - 2 * m + q + 1
@@ -61,10 +53,8 @@ def var_hat_func_L1_double_noise(m, q, sigma, alpha, delta_in, delta_out, percen
     return m_hat, q_hat, sigma_hat
 
 
-# @njit(error_model="numpy", fastmath=True)
-def var_hat_func_L1_decorrelated_noise(
-    m, q, sigma, alpha, delta_in, delta_out, percentage, beta
-):
+@njit(error_model="numpy", fastmath=False)
+def var_hat_func_L1_decorrelated_noise(m, q, sigma, alpha, delta_in, delta_out, percentage, beta):
     small_sqrt = delta_in - 2 * m + q + 1
     large_sqrt = delta_out - 2 * m * beta + q + beta**2
     small_exp = -(sigma**2) / (2 * small_sqrt)

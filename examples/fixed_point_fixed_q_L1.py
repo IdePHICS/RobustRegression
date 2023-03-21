@@ -1,11 +1,7 @@
-from robust_regression.aux_functions.free_energy import (
-    free_energy,
-    Psi_w_l2_reg,
-    Psi_out_L1
-)
+from robust_regression.aux_functions.free_energy import free_energy, Psi_w_L2_reg, Psi_out_L1
 from robust_regression.fixed_point_equations.fpeqs import fixed_point_finder
-from robust_regression.fixed_point_equations.fpe_L1 import (
-    var_func_L2,
+from robust_regression.fixed_point_equations.fpe_L2_regularization import var_func_L2
+from robust_regression.fixed_point_equations.fpe_L1_loss import (
     var_hat_func_L1_decorrelated_noise,
 )
 import numpy as np
@@ -15,7 +11,7 @@ from robust_regression.aux_functions.misc import damped_update
 
 blend = 1.0
 max_iter = 100000
-min_iter = 100
+min_iter = 500
 abs_tol = 1e-8
 
 delta_in, delta_out, percentage, beta = 1.0, 5.0, 0.3, 0.0
@@ -72,7 +68,7 @@ for reg_param in reg_params:
             q_hats[idx] = q_hat
 
             free_energies[idx] = free_energy(
-                Psi_w_l2_reg,
+                Psi_w_L2_reg,
                 Psi_out_L1,
                 alpha,
                 m,
@@ -94,9 +90,9 @@ for reg_param in reg_params:
             break
 
     while True:
-        m = 10 * np.random.random() + 0.01
-        q = 10 * np.random.random() + 0.01
-        sigma = 10 * np.random.random() + 0.01
+        m = 5 * np.random.random() + 0.01
+        q = 5 * np.random.random() + 0.01
+        sigma = 5 * np.random.random() + 0.01
         if np.square(m) < q + delta_in * q and np.square(m) < q + delta_out * q:
             break
 
@@ -119,7 +115,7 @@ for reg_param in reg_params:
     )
 
     free_energy_true = free_energy(
-        Psi_w_l2_reg,
+        Psi_w_L2_reg,
         Psi_out_L1,
         alpha,
         m_true,
@@ -133,8 +129,9 @@ for reg_param in reg_params:
     )
 
     color = next(plt.gca()._get_lines.prop_cycler)["color"]
-    plt.axhline(free_energy_true, linestyle="--", linewidth=0.75, color=color, alpha=0.5)
-    plt.axvline(q_true, linestyle="--", linewidth=0.75, color=color, alpha=0.5)
+    # plt.axhline(free_energy_true, linestyle="--", linewidth=0.75, color=color, alpha=0.5)
+    # plt.axvline(q_true, linestyle="--", linewidth=0.75, color=color, alpha=0.5)
+    plt.plot(q_true, free_energy_true, ".", color=color)
     plt.plot(qs, free_energies, label="$\\lambda$ = " + "{:.2f}".format(reg_param), color=color)
 
 

@@ -1,10 +1,10 @@
 from typing import Tuple
 from numpy import pi
-from math import sqrt, exp, erf, erfc
+from math import sqrt, exp, erf, erfc, log, sinh
 from numba import njit
 
 
-@njit
+# @njit
 def free_energy(
     Psi_w,
     Psi_out,
@@ -18,28 +18,42 @@ def free_energy(
     Psi_w_args: Tuple = (),
     Psi_out_args: Tuple = (),
 ):
-    Q_hat = sigma_hat - q_hat
-    Q = sigma + q
+    # Q_hat = sigma_hat - q_hat
+    # Q = sigma + q
     first_term = (
-        -0.5 * (q * sigma_hat - q_hat * sigma) + m * m_hat
+        -0.5 * sigma * sigma_hat - 0.5 * (q * sigma_hat - q_hat * sigma) + m * m_hat
     )  # m * m_hat - 0.5 * q * q_hat - 0.5 * Q * Q_hat
-    second_term = -Psi_w(Q_hat, m_hat, q_hat, *Psi_w_args)
-    third_term = alpha * Psi_out(Q, m, q, *Psi_out_args)
+    # first_term = (
+    #     -0.5 * (q * sigma_hat - q_hat * sigma) + m * m_hat
+    # )  # m * m_hat - 0.5 * q * q_hat - 0.5 * Q * Q_hat
+    second_term = -Psi_w(m_hat, q_hat, sigma_hat, *Psi_w_args)
+    third_term = alpha * Psi_out(m, q, sigma, *Psi_out_args)
+    # print("here", first_term, second_term, third_term)
     return first_term + second_term + third_term
 
 
 @njit
-def Psi_w_l2_reg(Q_hat: float, m_hat: float, q_hat: float, reg_param: float) -> float:
-    reg_param_combination = Q_hat + q_hat + reg_param
-    return 0.5 * ((q_hat + m_hat**2) / reg_param_combination)
-    # return 0.5 * ((q_hat + m_hat**2) / reg_param_combination - log(reg_param_combination))
+def Psi_w_L2_reg(m_hat: float, q_hat: float, sigma_hat: float, reg_param: float) -> float:
+    reg_param_combination = sigma_hat + reg_param
+    # return 0.5 * (q_hat + m_hat**2) / reg_param_combination
+    return 0.5 * ((q_hat + m_hat**2) / reg_param_combination - log(reg_param_combination))
+
+
+def Psi_w_projection_denoising(Q_hat: float, m_hat: float, q_hat: float, q_fixed: float) -> float:
+    # sigma_hat = Q_hat + q_hat
+    return 0.5 * sqrt(q_fixed * q_hat / (q_hat + m_hat**2))
 
 
 @njit
 def Psi_out_L2(
-    Q: float, m: float, q: float, delta_in: float, delta_out: float, percentage: float, beta: float
+    m: float,
+    q: float,
+    sigma: float,
+    delta_in: float,
+    delta_out: float,
+    percentage: float,
+    beta: float,
 ) -> float:
-    sigma = Q - q
     return (
         1
         + q
@@ -52,9 +66,14 @@ def Psi_out_L2(
 
 @njit
 def Psi_out_L1(
-    Q: float, m: float, q: float, delta_in: float, delta_out: float, percentage: float, beta: float
+    m: float,
+    q: float,
+    sigma: float,
+    delta_in: float,
+    delta_out: float,
+    percentage: float,
+    beta: float,
 ) -> float:
-    sigma = Q - q
     comb_in = 1 - 2 * m + q + delta_in
     comb_out = q - 2 * m * beta + beta**2 + delta_out
     return (
@@ -88,16 +107,16 @@ def Psi_out_L1(
 
 @njit
 def Psi_out_Huber(
-    Q: float,
     m: float,
     q: float,
+    sigma: float,
     delta_in: float,
     delta_out: float,
     percentage: float,
     beta: float,
     a: float,
 ) -> float:
-    sigma = Q - q
+    # sigma = Q - q
     comb_in = 1 - 2 * m + q + delta_in
     comb_out = q - 2 * m * beta + beta**2 + delta_out
     return (

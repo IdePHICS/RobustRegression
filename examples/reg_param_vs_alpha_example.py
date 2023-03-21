@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import robust_regression.sweeps.alpha_sweeps as alsw
-from robust_regression.fixed_point_equations.fpe_L2 import (
-    var_func_L2,
+from robust_regression.fixed_point_equations.fpe_L2_regularization import var_func_L2
+from robust_regression.fixed_point_equations.fpe_L2_loss import (
     var_hat_func_L2_decorrelated_noise,
 )
 

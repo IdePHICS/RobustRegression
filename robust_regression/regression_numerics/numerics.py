@@ -18,11 +18,16 @@ def train_error_data(
     return train_error
 
 
-def real_overlaps(ys, xs, estimated_theta, ground_truth_theta):
+def m_real_overlaps(ys, xs, estimated_theta, ground_truth_theta):
     d = xs.shape[1]
     m = dot(estimated_theta, ground_truth_theta) / d
-    q = dot(estimated_theta, estimated_theta) / d
-    return m, q
+    return m
+
+
+def q_real_overlaps(ys, xs, estimated_theta, ground_truth_theta):
+    d = xs.shape[1]
+    q = sum(square(estimated_theta)) / d
+    return q
 
 
 def erm_weight_finding(
@@ -45,13 +50,12 @@ def erm_weight_finding(
                 len(funs), len(funs_args)
             )
         )
-    
+
     if n_features <= 0:
         raise ValueError("n_features should be positive, in this case is {:d}".format(n_features))
-    
+
     if repetitions <= 0:
         raise ValueError("repetitions should be positive, in this case is {:d}".format(repetitions))
-    
 
     out_list = [empty(repetitions) for _ in range(len(funs))]
     out_list_mean = empty(len(funs))

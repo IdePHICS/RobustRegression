@@ -50,7 +50,7 @@ def GAMP_algorithm_unsimplified(
         new_c_w_t = Df_w(gamma_t, Lambda_t, *f_w_args)
 
         err = max(mean(abs(new_w_hat_t - w_hat_t)), mean(abs(new_c_w_t - c_w_t)))
-
+        # print(err)
         w_hat_t = damped_update(new_w_hat_t, w_hat_t, blend)
         c_w_t = damped_update(new_c_w_t, c_w_t, blend)
 

@@ -1,13 +1,12 @@
-from numpy import divide, identity, sqrt, abs, count_nonzero, sum, dot, ones_like, inf, tile, finfo, float64, empty, nonzero
-import numpy as np
+from numpy import divide, identity, sqrt, abs, count_nonzero, sum, dot, ones_like, inf, tile, finfo, float64
 from numpy.linalg import norm
 from numpy.linalg import solve
 from numpy.random import normal
-from numba import njit, prange
+from numba import njit
 from scipy.optimize import minimize
 from cvxpy import Variable, Minimize, Problem, norm, sum_squares
 from ..utils.matrix_utils import axis0_pos_neg_mask, safe_sparse_dot
-from ..regression_numerics import GTOL_MINIMIZE, MAX_ITER_MINIMIZE, BLEND_GAMP, TOL_GAMP
+from ..regression_numerics import GTOL_MINIMIZE, MAX_ITER_MINIMIZE
 
 
 @njit(error_model="numpy", fastmath=True)

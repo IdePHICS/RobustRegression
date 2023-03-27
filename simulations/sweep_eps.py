@@ -1,14 +1,14 @@
 import robust_regression.sweeps.eps_sweep as epsw
 import matplotlib.pyplot as plt
-from robust_regression.fixed_point_equations.fpe_L2 import (
+from robust_regression.fixed_point_equations.fpe_L2_loss import (
     var_func_L2,
     var_hat_func_L2_decorrelated_noise,
 )
-from robust_regression.fixed_point_equations.fpe_L1 import (
+from robust_regression.fixed_point_equations.fpe_L1_loss import (
     var_func_L2,
     var_hat_func_L1_decorrelated_noise,
 )
-from robust_regression.fixed_point_equations.fpe_Huber import (
+from robust_regression.fixed_point_equations.fpe_Huber_loss import (
     var_func_L2,
     var_hat_func_Huber_decorrelated_noise,
 )

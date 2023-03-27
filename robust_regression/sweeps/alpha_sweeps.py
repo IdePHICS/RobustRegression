@@ -289,13 +289,10 @@ def sweep_alpha_GAMP(
     out_list_std = empty((n_observables, n_alpha_pts))
 
     for idx, alpha in enumerate(alphas):
-        # this is better with a list
-        # all_values = empty((n_observables, repetitions))
         all_values = [list() for _ in range(n_observables)]
 
         for _ in range(repetitions):
             try:
-                print("alpha ", alpha, max(int(around(n_features * alpha)), 1) / n_features)
                 xs, ys, _, _, ground_truth_theta = data_generation(
                     measure_fun,
                     n_features=n_features,
@@ -319,10 +316,7 @@ def sweep_alpha_GAMP(
                     blend=blend,
                 )
 
-                print("Final error: ", sum((estimated_theta - ground_truth_theta) ** 2) / n_features)
-
                 for kdx, (f, f_args) in enumerate(zip(funs, funs_args)):
-                    # all_values[kdx][jdx] = f(ys, xs, estimated_theta, ground_truth_theta, *f_args)
                     all_values[kdx].append(f(ys, xs, estimated_theta, ground_truth_theta, *f_args))
 
                 del xs
@@ -338,10 +332,6 @@ def sweep_alpha_GAMP(
                 del xs
                 del ys
                 del ground_truth_theta
-
-                # for kdx in range(n_observables):
-                #     out_list_mean[kdx][idx] = nan
-                #     out_list_std[kdx][idx] = nan
 
         for kdx in range(n_observables):
             out_list_mean[kdx][idx] = mean(all_values[kdx])

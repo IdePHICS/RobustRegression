@@ -56,6 +56,7 @@ def GAMP_algorithm_unsimplified(
         
         w_hat_t = damped_update(new_w_hat_t, w_hat_t, blend)
         c_w_t = damped_update(new_c_w_t, c_w_t, blend)
+        f_out_t_1 = f_out_t
 
         iter_nb += 1
         if iter_nb > max_iter:

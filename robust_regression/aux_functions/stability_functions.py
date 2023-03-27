@@ -4,7 +4,7 @@ from numpy import sqrt
 from scipy.special import erf
 
 
-@vectorize
+# @vectorize
 def stability_ridge(
     m: float,
     q: float,

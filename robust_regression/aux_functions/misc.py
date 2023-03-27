@@ -18,24 +18,6 @@ def damped_update(new, old, damping):
     return damping * new + (1 - damping) * old
 
 
-@njit(error_model="numpy", fastmath=True)
+# @njit(error_model="numpy", fastmath=True)
 def gen_error(m, q, sigma, *args):
-    return 1 + q - 2 * m
-
-
-@vectorize("float64(float64, float64)")
-def l2_loss(y: float, z: float):
-    return 0.5 * (y - z) ** 2
-
-
-@vectorize("float64(float64, float64)")
-def l1_loss(y: float, z: float):
-    return abs(y - z)
-
-
-@vectorize("float64(float64, float64, float64)")
-def huber_loss(y: float, z: float, a: float):
-    if abs(y - z) < a:
-        return 0.5 * (y - z) ** 2
-    else:
-        return a * abs(y - z) - 0.5 * a**2
+    return 1 + q - 2.0 * m

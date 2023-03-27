@@ -7,7 +7,7 @@ def order_parameters_ridge(alpha, reg_param, delta_in, delta_out, percentage, be
 
     delta_eff = (1 - percentage) * delta_in + percentage * delta_out
     t = sqrt((alpha + reg_param - 1) ** 2 + 4 * reg_param)
-    print(t)
+
     Gamma = 1 + percentage * (beta - 1)
     Lambda = 1 + delta_eff + percentage * (beta**2 - 1)
 

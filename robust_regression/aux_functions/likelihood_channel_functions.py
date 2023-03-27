@@ -1,4 +1,4 @@
-from numba import vectorize
+from numba import vectorize, njit
 from numpy import pi, sign
 from math import exp, sqrt, pow
 
@@ -106,22 +106,28 @@ def Df_out_L2(y: float, omega: float, V: float) -> float:
 # -----------------------------------
 
 
+# @njit(error_model="numpy", fastmath=True)
 @vectorize("float64(float64, float64, float64)")
 def f_out_L1(y: float, omega: float, V: float) -> float:
     # return (y - omega + sign(omega - y) * max(abs(omega - y) - V, 0.0)) / V
-    if abs(omega - y) > V:
-        if omega - y > 0.0:
-            return 1.0
-        else:
-            return -1.0
-        # return sign(omega - y)
+    # return (y - omega + sign(omega - y) * maximum(abs(omega - y) - V, 0.0)) / V
+    # if abs(y - omega) > V:
+    #     if y - omega > 0.0: # omega - y > 0.0:
+    #         return 1.0
+    #     else:
+    #         return -1.0
+    #     # return sign(omega - y)
+    if y - omega < -V:
+        return -1.0
+    elif y - omega > V:
+        return 1.0
     else:
         return (y - omega) / V
 
 
 @vectorize(["float64(float64, float64, float64)"])
 def Df_out_L1(y: float, omega: float, V: float) -> float:
-    if abs(omega - y) > V:
+    if abs(y - omega) > V:
         return 0.0
     else:
         return -1.0 / V
@@ -129,7 +135,7 @@ def Df_out_L1(y: float, omega: float, V: float) -> float:
 
 # -----------------------------------
 
-
+# what is this strange stuff? To be checked ...
 @vectorize(["float64(float64, float64, float64, float64)"])
 def f_out_Huber(y: float, omega: float, V: float, a: float) -> float:
     if a + a * V + omega < y:

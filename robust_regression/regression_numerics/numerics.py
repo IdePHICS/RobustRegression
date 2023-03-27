@@ -2,19 +2,18 @@ from numpy import around, empty, sum, mean, std, square, divide, sqrt, dot
 from .data_generation import data_generation
 
 
-def gen_error_data(ys, xs_norm, estimated_theta, ground_truth_theta):
-    n_features = xs_norm.shape[1]
-    gen_error = divide(sum(square(ground_truth_theta - estimated_theta)), n_features)
+def gen_error_data(ys, xs, estimated_theta, ground_truth_theta):
+    _, d = xs.shape
+    gen_error = sum((ground_truth_theta - estimated_theta) ** 2) / d
     return gen_error
 
 
 def train_error_data(
     ys, xs, estimated_theta, ground_truth_theta, loss_function, loss_function_args
 ):
-    xs_norm = xs / sqrt(xs.shape[1])
-    train_error = (
-        sum(loss_function(ys, xs_norm @ estimated_theta, *loss_function_args)) / xs.shape[0]
-    )
+    n, d = xs.shape
+    xs_norm = xs / sqrt(d)
+    train_error = sum(loss_function(ys, xs_norm @ estimated_theta, *loss_function_args)) / n
     return train_error
 
 

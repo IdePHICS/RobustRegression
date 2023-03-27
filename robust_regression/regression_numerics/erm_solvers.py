@@ -1,9 +1,8 @@
 from numpy import divide, identity, sqrt, abs, count_nonzero, sum, dot, ones_like, inf, tile, finfo, float64
-from numpy.linalg import norm
-from numpy.linalg import solve
+import numpy.linalg as LA
 from numpy.random import normal
 from numba import njit
-from scipy.optimize import minimize
+from scipy.optimize import minimize, line_search
 from cvxpy import Variable, Minimize, Problem, norm, sum_squares
 from ..utils.matrix_utils import axis0_pos_neg_mask, safe_sparse_dot
 from ..regression_numerics import GTOL_MINIMIZE, MAX_ITER_MINIMIZE
@@ -14,7 +13,7 @@ def find_coefficients_L2(ys, xs, reg_param):
     _, d = xs.shape
     a = divide(xs.T.dot(xs), d) + reg_param * identity(d)
     b = divide(xs.T.dot(ys), sqrt(d))
-    return solve(a, b)
+    return LA.solve(a, b)
 
 
 def find_coefficients_L1(ys, xs, reg_param):
@@ -88,20 +87,22 @@ def find_coefficients_Huber(ys, xs, reg_param, a):
 
 def find_coefficients_Huber_on_sphere(ys, xs, reg_param, q_fixed, a, gamma = 1e-04):
     _, d = xs.shape
-    w = normal(loc=0.0, scale=1.0, size=(d,)) / sqrt(norm(w)) * sqrt(q_fixed)
+    w = normal(loc=0.0, scale=1.0, size=(d,)) 
+    w = w / sqrt(LA.norm(w)) * sqrt(q_fixed)
     xs_norm = divide(xs, sqrt(d))
 
     loss, grad = _loss_and_gradient_Huber(w, xs_norm, ys, reg_param, a)
     iter = 0
-    while iter < MAX_ITER_MINIMIZE and norm(grad) > GTOL_MINIMIZE:
+    while iter < MAX_ITER_MINIMIZE and LA.norm(grad) > GTOL_MINIMIZE:
         if iter % 10 == 0:
-            print(str(iter) + 'th Iteration    Loss :: ' + str(loss) + ' gradient :: ' +  str(norm(grad)))
+            print(str(iter) + 'th Iteration  Loss :: ' + str(loss) + ' gradient :: ' +  str(LA.norm(grad)))
 
         alpha = 1
         new_w = w - alpha * grad
         new_loss, new_grad = _loss_and_gradient_Huber(w, xs_norm, ys, reg_param, a)
 
-        while new_loss > loss - gamma * alpha * norm(grad):
+        # backtracking line search
+        while new_loss > loss - gamma * alpha * LA.norm(grad):
             alpha = alpha / 2
             new_w = w - alpha * grad
             new_loss, new_grad = _loss_and_gradient_Huber(w, xs_norm, ys, reg_param, a)

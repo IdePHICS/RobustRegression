@@ -1,6 +1,6 @@
 from numba import vectorize
 from math import exp, sqrt, cosh, sinh
-
+from numpy.linalg import norm
 
 @vectorize("float64(float64, float64, float64, float64)")
 def Z_w_Bayes_gaussian_prior(gamma: float, Lambda: float, mu: float, sigma: float) -> float:
@@ -83,7 +83,7 @@ def Df_w_L1_regularization(gamma: float, Lambda: float, reg_param: float) -> flo
 
 @vectorize("float64(float64, float64, float64)")
 def Z_w_L2_regularization(gamma: float, Lambda: float, reg_param: float) -> float:
-    return exp((gamma**2 * Lambda) / (2 * (reg_param + Lambda) ** 2))
+    return exp(gamma**2 / (2.0 * (reg_param + Lambda))) / sqrt(reg_param + Lambda)
 
 
 @vectorize("float64(float64, float64, float64)")
@@ -95,3 +95,13 @@ def f_w_L2_regularization(gamma: float, Lambda: float, reg_param: float) -> floa
 def Df_w_L2_regularization(gamma: float, Lambda: float, reg_param: float) -> float:
     return 1.0 / (reg_param + Lambda)
 
+
+# -------------------------
+
+# @vectorize("float64(float64, float64, float64)")
+def f_w_projection_on_sphere(gamma: float, Lambda: float, q_fixed: float) -> float:
+    return gamma * sqrt(q_fixed) / norm(gamma)
+
+
+def Df_w_projection_on_sphere(gamma: float, Lambda: float, q_fixed: float) -> float:
+    return sqrt(q_fixed) / norm(gamma)

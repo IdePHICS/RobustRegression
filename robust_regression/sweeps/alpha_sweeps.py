@@ -1,10 +1,14 @@
-from numpy import logspace, linspace, empty, nan
+from numpy import logspace, linspace, empty, nan, around, mean, std
+from numpy.random import normal
 from math import log10
 from typing import Tuple
 from ..utils.errors import ConvergenceError
 from ..fixed_point_equations.fpeqs import fixed_point_finder
+from ..regression_numerics.data_generation import data_generation
+from ..regression_numerics.amp_funcs import GAMP_algorithm_unsimplified
 from ..aux_functions.misc import gen_error
 from ..fixed_point_equations import SMALLEST_REG_PARAM, SMALLEST_HUBER_PARAM
+from ..regression_numerics import TOL_GAMP, MAX_ITER_GAMP, BLEND_GAMP
 from ..fixed_point_equations.optimality_finding import (
     find_optimal_reg_param_function,
     find_optimal_reg_and_huber_parameter_function,
@@ -253,6 +257,102 @@ def sweep_alpha_optimal_lambda_hub_param_fixed_point(
 # ------------------- #
 
 
+def sweep_alpha_GAMP(
+    f_w: callable,
+    Df_w: callable,
+    f_out: callable,
+    Df_out: callable,
+    measure_fun: callable,
+    alpha_min: float,
+    alpha_max: float,
+    n_alpha_pts: int,
+    repetitions: int,
+    n_features: int,
+    f_w_args: tuple,
+    f_out_args: tuple,
+    measure_fun_args: Tuple,
+    funs=[gen_error],
+    funs_args=[list()],
+    decreasing=False,
+    abs_tol=TOL_GAMP,
+    max_iter=MAX_ITER_GAMP,
+    blend=BLEND_GAMP,
+    tolerate_not_convergence=True,
+):
+    n_observables = len(funs)
+    alphas = (
+        logspace(log10(alpha_min), log10(alpha_max), n_alpha_pts)
+        if not decreasing
+        else logspace(log10(alpha_max), log10(alpha_min), n_alpha_pts)
+    )
+    out_list_mean = empty((n_observables, n_alpha_pts))
+    out_list_std = empty((n_observables, n_alpha_pts))
+
+    for idx, alpha in enumerate(alphas):
+        # this is better with a list
+        # all_values = empty((n_observables, repetitions))
+        all_values = [list() for _ in range(n_observables)]
+
+        for _ in range(repetitions):
+            try:
+                print("alpha ", alpha, max(int(around(n_features * alpha)), 1) / n_features)
+                xs, ys, _, _, ground_truth_theta = data_generation(
+                    measure_fun,
+                    n_features=n_features,
+                    n_samples=max(int(around(n_features * alpha)), 1),
+                    n_generalization=1,
+                    measure_fun_args=measure_fun_args,
+                )
+
+                estimated_theta = GAMP_algorithm_unsimplified(
+                    f_w,
+                    Df_w,
+                    f_out,
+                    Df_out,
+                    ys,
+                    xs,
+                    f_w_args,
+                    f_out_args,
+                    ground_truth_theta,
+                    abs_tol=abs_tol,
+                    max_iter=max_iter,
+                    blend=blend,
+                )
+
+                print("Final error: ", sum((estimated_theta - ground_truth_theta) ** 2) / n_features)
+
+                for kdx, (f, f_args) in enumerate(zip(funs, funs_args)):
+                    # all_values[kdx][jdx] = f(ys, xs, estimated_theta, ground_truth_theta, *f_args)
+                    all_values[kdx].append(f(ys, xs, estimated_theta, ground_truth_theta, *f_args))
+
+                del xs
+                del ys
+                del ground_truth_theta
+
+            except ConvergenceError as e:
+                if not tolerate_not_convergence:
+                    raise e
+
+                print(e)
+
+                del xs
+                del ys
+                del ground_truth_theta
+
+                # for kdx in range(n_observables):
+                #     out_list_mean[kdx][idx] = nan
+                #     out_list_std[kdx][idx] = nan
+
+        for kdx in range(n_observables):
+            out_list_mean[kdx][idx] = mean(all_values[kdx])
+            out_list_std[kdx][idx] = std(all_values[kdx])
+
+    return alphas, out_list_mean, out_list_std
+
+
+# ------------------- #
+
+
 def sweep_alpha_descend_lambda(
     var_func,
     var_hat_func,
@@ -370,7 +470,7 @@ def sweep_alpha_minimal_stable_reg_param(
                 alpha_min, alpha_max
             )
         )
-    
+
     if alpha_min <= 0:
         raise ValueError("alpha_min should be positive, in this case is {:f}".format(alpha_min))
 
@@ -419,7 +519,10 @@ def sweep_alpha_minimal_stable_reg_param(
                 )
                 old_initial_cond = tuple([m, q, sigma])
 
-                if condition_func(m,q,sigma,**copy_var_func_kwargs, **copy_var_hat_func_kwargs) <= 0.0:
+                if (
+                    condition_func(m, q, sigma, **copy_var_func_kwargs, **copy_var_hat_func_kwargs)
+                    <= 0.0
+                ):
                     not_converged_idx = points_per_run - 1 - jdx
                     break
 

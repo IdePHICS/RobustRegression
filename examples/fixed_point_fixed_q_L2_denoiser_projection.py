@@ -3,7 +3,6 @@ from robust_regression.fixed_point_equations.fpe_projection_denoising import (
     var_func_projection_denoising,
 )
 from robust_regression.fixed_point_equations.fpe_L2_loss import var_hat_func_L2_decorrelated_noise
-from robust_regression.fixed_point_equations.fpe_L2_regularization import var_func_L2
 from robust_regression.aux_functions.training_errors import training_error_l2_loss
 import numpy as np
 import matplotlib.pyplot as plt

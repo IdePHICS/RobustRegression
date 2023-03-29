@@ -1,7 +1,5 @@
-from unittest import TestCase, main
+from unittest import main
 from scipy.optimize import minimize_scalar
-from numpy.random import random, normal
-from math import sqrt
 from .function_comparison import FunctionComparisonTest
 import robust_regression.aux_functions.likelihood_channel_functions as lcf
 

@@ -20,6 +20,10 @@ class FunctionComparisonTest(TestCase):
             return random.uniform(0, 100)
         elif signature == "u":
             return random.uniform(-100, 100)
+        elif signature == "0-1":
+            return random.uniform(0, 1)
+        elif signature == "n":
+            return random.gauss(0, 1)
         else:
             raise ValueError("Invalid argument signature")
 

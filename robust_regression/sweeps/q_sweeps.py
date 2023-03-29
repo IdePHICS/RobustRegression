@@ -52,6 +52,7 @@ def sweep_fw_first_arg_GAMP(
                     measure_fun_args=measure_fun_args,
                 )
 
+                # we want to initialize them at the fixed point so:
                 estimated_theta = GAMP_algorithm_unsimplified(
                     f_w,
                     Df_w,
@@ -61,7 +62,7 @@ def sweep_fw_first_arg_GAMP(
                     xs,
                     (fw_arg,),
                     f_out_args,
-                    ground_truth_theta,
+                    ground_truth_theta ,
                     abs_tol=abs_tol,
                     max_iter=max_iter,
                     blend=blend,

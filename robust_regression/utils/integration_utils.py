@@ -16,7 +16,7 @@ x_ge, w_ge = np.polynomial.hermite.hermgauss(N_GAUSS_HERMITE)
 
 @njit(error_model="numpy", fastmath=True)
 def gauss_hermite_quadrature(fun, mean, std):
-    #  x, w = np.polynomial.hermite.hermgauss(N_GAUSS_HERMITE)
+    # x, w = np.polynomial.hermite.hermgauss(N_GAUSS_HERMITE)
     y = np.sqrt(2.0) * std * x_ge + mean
     jacobian = np.sqrt(2.0) * std
     return np.sum(w_ge * jacobian * fun(y))
@@ -80,12 +80,11 @@ def find_integration_borders_square(
 
 
 def divide_integration_borders_multiple_grid(square_borders, N=10):
+    if N<1:
+        raise ValueError('N must be greater than 1')
+    
     max_range = square_borders[0][1]
     step = 2 * max_range / N
-
-    # 1 | 2 | 3
-    # 4 | 5 | 6
-    # 7 | 8 | 9
 
     domain_x = []
     domain_y = []

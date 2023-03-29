@@ -1,52 +1,71 @@
 from unittest import TestCase, main
-from scipy.optimize import root_scalar
+from scipy.optimize import minimize_scalar
 from numpy.random import random, normal
 from math import sqrt
+from .function_comparison import FunctionComparisonTest
 import robust_regression.aux_functions.likelihood_channel_functions as lcf
 
 
-class TestFoutL2(TestCase):
+class TestFoutL2(FunctionComparisonTest):
+    def test_input_format(self):
+        self.assertEqual(0.0, 0.0)
+
     def test_values(self):
-        for _ in range(100):
-            y = sqrt(10) * normal()
-            V = 10 * random() + 0.01
-            omega = 10 * normal()
-            x_numerics = root_scalar(
-                lambda z: 0.5 * (y - z) ** 2 + 1.0 / (2.0 * V) * (z - omega) ** 2,
-            ).root
-            self.assertAlmostEqual(lcf.f_out_L2(y, omega, V), x_numerics)
+        self.compare_two_functions(
+            lcf.f_out_L2,
+            lambda y, omega, V: (
+                minimize_scalar(
+                    lambda z: 0.5 * (y - z) ** 2 + 0.5 / V * (z - omega) ** 2,
+                    bracket=[-1e20, 1e20],
+                    tol=1e-10,
+                ).x
+                - omega
+            )
+            / V,
+            arg_signatures=("u", "u", "+")
+        )
 
 
-class TestFoutL1(TestCase):
+class TestFoutL1(FunctionComparisonTest):
     def test_values(self):
-        for _ in range(100):
-            y = sqrt(10) * normal()
-            V = 10 * random() + 0.01
-            omega = 10 * normal()
-            x_numerics = root_scalar(
-                lambda z: abs(y - z) + 1.0 / (2.0 * V) * (z - omega) ** 2,
-            ).root
-            self.assertAlmostEqual(lcf.f_out_L1(y, omega, V), x_numerics)
+        self.compare_two_functions(
+            lcf.f_out_L1,
+            lambda y, omega, V: (
+                minimize_scalar(
+                    lambda z: abs(y - z) + 0.5 / V * (z - omega) ** 2,
+                    bracket=[-1e20, 1e20],
+                    tol=1e-10,
+                ).x
+                - omega
+            )
+            / V,
+            arg_signatures=("u", "u", "+")
+        )
 
 
-class TestFoutHuber(TestCase):
+class TestFoutHuber(FunctionComparisonTest):
     def test_values(self):
-        for _ in range(100):
-            y = sqrt(10) * normal()
-            V = 10 * random() + 0.01
-            omega = 10 * normal()
-            a = 10 * random() + 0.01
+        def true_huber(x, y, a):
+            if abs(x - y) <= a:
+                return 0.5 * (x - y) ** 2
+            else:
+                return a * abs(x - y) - 0.5 * a**2
 
-            def huber_loss(x,y,a):
-                if abs(x-y) <= a:
-                    return 0.5 * (x-y)**2
-                else:
-                    return a * abs(x-y) - 0.5 * a**2
-                
-            x_numerics = root_scalar(
-                lambda z: huber_loss(y,z,a) + 1.0 / (2.0 * V) * (z - omega) ** 2,
-            ).root
-            self.assertAlmostEqual(lcf.f_out_Huber(y, omega, V, a), x_numerics)
+        as_test = [0.001, 0.01, 0.1, 1, 10, 100]
+        for a in as_test:
+            self.compare_two_functions(
+                lambda y, omega, V : lcf.f_out_Huber(y, omega, V, a),
+                lambda y, omega, V: (
+                    minimize_scalar(
+                        lambda z : true_huber(y, z, a) + 0.5 / V * (z - omega) ** 2,
+                        bracket=[-1e20, 1e20],
+                        tol=1e-10,
+                    ).x
+                    - omega
+                )
+                / V,
+                arg_signatures=("u", "u", "+")
+            )
 
 
 if __name__ == "__main__":

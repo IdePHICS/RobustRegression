@@ -1,59 +1,36 @@
 from unittest import TestCase, main
 from numpy.random import randn, normal
 import robust_regression.aux_functions.loss_functions as lf
+from .function_comparison import FunctionComparisonTest
 
 
-class TestL2LossFunctions(TestCase):
+class TestFoutL2(FunctionComparisonTest):
     def test_values(self):
-        def correct_loss(x, y):
-            return 0.5 * (x - y) ** 2
-
-        for _ in range(100):
-            x = randn()
-            y = randn()
-            self.assertAlmostEqual(lf.l2_loss(x, y), correct_loss(x, y))
-
-        for _ in range(100):
-            x = normal()
-            y = normal()
-            self.assertAlmostEqual(lf.l2_loss(x, y), correct_loss(x, y))
+        self.compare_two_functions(
+            lf.l2_loss, lambda x, y: 0.5 * (x - y) ** 2, arg_signatures=("u", "u")
+        )
 
 
-class TestL1LossFunctions(TestCase):
+class TestFoutL1(FunctionComparisonTest):
     def test_values(self):
-        def correct_loss(x, y):
-            return abs(x - y)
-
-        for _ in range(100):
-            x = randn()
-            y = randn()
-            self.assertAlmostEqual(lf.l1_loss(x, y), correct_loss(x, y))
-
-        for _ in range(100):
-            x = normal()
-            y = normal()
-            self.assertAlmostEqual(lf.l1_loss(x, y), correct_loss(x, y))
+        self.compare_two_functions(lf.l1_loss, lambda x, y: abs(x - y), arg_signatures=("u", "u"))
 
 
-class TestHuberLossFunctions(TestCase):
+class TestFoutHuber(FunctionComparisonTest):
     def test_values(self):
-        def correct_loss(x, y, a):
-            if abs(x - y) < a:
+        def true_huber(x, y, a):
+            if abs(x - y) <= a:
                 return 0.5 * (x - y) ** 2
             else:
                 return a * abs(x - y) - 0.5 * a**2
 
-        for _ in range(100):
-            x = randn()
-            y = randn()
-            a = randn()
-            self.assertAlmostEqual(lf.huber_loss(x, y, a), correct_loss(x, y, a))
-
-        for _ in range(100):
-            x = normal()
-            y = normal()
-            a = normal()
-            self.assertAlmostEqual(lf.huber_loss(x, y, a), correct_loss(x, y, a))
+        as_test = [0.001, 0.01, 0.1, 1, 10, 100]
+        for a in as_test:
+            self.compare_two_functions(
+                lambda x, y: lf.huber_loss(x, y, a),
+                lambda x, y: true_huber(x, y, a),
+                arg_signatures=("u", "u"),
+            )
 
 
 if __name__ == "__main__":

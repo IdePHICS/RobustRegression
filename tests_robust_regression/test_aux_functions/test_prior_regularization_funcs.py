@@ -3,10 +3,10 @@ from scipy.optimize import minimize_scalar
 from scipy.integrate import quad
 import numpy as np
 import robust_regression.aux_functions.prior_regularization_funcs as prf
-from .function_comparison import FunctionComparisonTest
+from tests_robust_regression.function_comparison import TestFunctionComparison
 
 
-# class TestZwBayesGaussianPrior(FunctionComparisonTest):
+# class TestZwBayesGaussianPrior(TestFunctionComparison):
 #     def test_values(self):
 #         self.compare_two_functions(
 #             prf.Z_w_Bayes_gaussian_prior,
@@ -21,7 +21,7 @@ from .function_comparison import FunctionComparisonTest
 #         )
 
 
-class TestFwL2Regularization(FunctionComparisonTest):
+class TestFwL2Regularization(TestFunctionComparison):
     def test_values(self):
         reg_params_test = [0.001, 0.01, 0.1, 1, 10, 100]
         for reg_param in reg_params_test:
@@ -39,7 +39,7 @@ class TestFwL2Regularization(FunctionComparisonTest):
             )
 
 
-class TestFwL1Regularization(FunctionComparisonTest):
+class TestFwL1Regularization(TestFunctionComparison):
     def test_values(self):
         reg_params_test = [0.001, 0.01, 0.1, 1, 10, 100]
         for reg_param in reg_params_test:

@@ -1,22 +1,22 @@
 from unittest import TestCase, main
 from numpy.random import randn, normal
 import robust_regression.aux_functions.loss_functions as lf
-from .function_comparison import FunctionComparisonTest
+from tests_robust_regression.function_comparison import TestFunctionComparison
 
 
-class TestFoutL2(FunctionComparisonTest):
+class TestFoutL2(TestFunctionComparison):
     def test_values(self):
         self.compare_two_functions(
             lf.l2_loss, lambda x, y: 0.5 * (x - y) ** 2, arg_signatures=("u", "u")
         )
 
 
-class TestFoutL1(FunctionComparisonTest):
+class TestFoutL1(TestFunctionComparison):
     def test_values(self):
         self.compare_two_functions(lf.l1_loss, lambda x, y: abs(x - y), arg_signatures=("u", "u"))
 
 
-class TestFoutHuber(FunctionComparisonTest):
+class TestFoutHuber(TestFunctionComparison):
     def test_values(self):
         def true_huber(x, y, a):
             if abs(x - y) <= a:

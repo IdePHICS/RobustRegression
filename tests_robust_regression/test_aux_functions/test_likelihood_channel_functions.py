@@ -1,13 +1,10 @@
 from unittest import main
 from scipy.optimize import minimize_scalar
-from .function_comparison import FunctionComparisonTest
+from tests_robust_regression.function_comparison import TestFunctionComparison
 import robust_regression.aux_functions.likelihood_channel_functions as lcf
 
 
-class TestFoutL2(FunctionComparisonTest):
-    def test_input_format(self):
-        self.assertEqual(0.0, 0.0)
-
+class TestFoutL2(TestFunctionComparison):
     def test_values(self):
         self.compare_two_functions(
             lcf.f_out_L2,
@@ -24,7 +21,7 @@ class TestFoutL2(FunctionComparisonTest):
         )
 
 
-class TestFoutL1(FunctionComparisonTest):
+class TestFoutL1(TestFunctionComparison):
     def test_values(self):
         self.compare_two_functions(
             lcf.f_out_L1,
@@ -41,7 +38,7 @@ class TestFoutL1(FunctionComparisonTest):
         )
 
 
-class TestFoutHuber(FunctionComparisonTest):
+class TestFoutHuber(TestFunctionComparison):
     def test_values(self):
         def true_huber(x, y, a):
             if abs(x - y) <= a:

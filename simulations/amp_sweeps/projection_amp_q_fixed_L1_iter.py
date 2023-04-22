@@ -36,12 +36,13 @@ min_iter = 100
 max_iter = 10000
 blend = 0.85
 
-n_features = 2000
-repetitions = 5
+n_features = 3000
+d = n_features
+repetitions = 10
 
 alpha, delta_in, delta_out, percentage, beta = 2.0, 1.0, 5.0, 0.3, 0.0
 n_samples = max(int(np.around(n_features * alpha)), 1)
-q = 1.0
+q = 3.2
 
 qs_amp = list()
 gen_err_mean_amp = list()
@@ -54,8 +55,8 @@ plt.figure(figsize=(10, 7.5))
 plt.title(
     "L1 loss Projective Denoiser"
     + " d = {:d}".format(n_features)
-    + r" $\alpha$ = "
-    + "{:.2f}".format(alpha)
+    + r" $q$ = "
+    + "{:.2f}".format(q)
     + r" $\Delta_{in}$ = "
     + "{:.2f}".format(delta_in)
     + r" $\Delta_{out}$ ="
@@ -93,8 +94,8 @@ while err > abs_tol or iter_nb < min_iter:
     if iter_nb > max_iter:
         raise ConvergenceError("fixed_point_finder", iter_nb)
 
-plt.axhline(m, color=color_m, label="m theoretical", linestyle="--")
-plt.axhline(q, color=color_q, label="q theoretical", linestyle="--")
+# plt.axhline(m, color=color_m, label="m theoretical", linestyle="--")
+# plt.axhline(q, color=color_q, label="q theoretical", linestyle="--")
 
 for _ in range(repetitions):
     xs, ys, _, _, ground_truth_theta = dg.data_generation(
@@ -106,7 +107,15 @@ for _ in range(repetitions):
     )
 
     # we want to initialize them at the fixed point so:
-    estimated_theta, q_list, m_list, prev_dot_list = GAMP_algorithm_unsimplified_mod_2(
+    print(f"q = {q}, m = {m}")
+    init_w = m * ground_truth_theta + np.sqrt(q - m**2) * np.random.normal(size=n_features)
+
+    while not np.isclose([np.mean(init_w **2), np.mean(init_w * ground_truth_theta)], [q, m], rtol=0.0, atol=1e-1).all():
+        init_w = m * ground_truth_theta + np.sqrt(q - m**2) * np.random.normal(size=n_features)
+
+    print("found ")
+
+    estimated_theta, q_list, m_list, prev_dot_list, eps_list = GAMP_algorithm_unsimplified_mod_2(
         sigma,
         f_w_projection_on_sphere,
         Df_w_projection_on_sphere,
@@ -116,22 +125,26 @@ for _ in range(repetitions):
         xs,
         (q,),
         list(),
-        m * ground_truth_theta + np.sqrt(q - m**2) * np.random.normal(size=n_features),
+        init_w, # m * ground_truth_theta + np.sqrt(q - m**2) * np.random.normal(size=n_features),
         ground_truth_theta,
-        abs_tol=1e-3,
-        max_iter=200,
-        blend=0.85,
+        abs_tol=5e-3,
+        max_iter=1000,
+        blend=1.0,
     )
 
-    plt.plot(q_list, marker=".", color=color_q, linestyle="-")
-    plt.plot(m_list, marker=".", color=color_m, linestyle="-")
-    plt.plot(prev_dot_list, marker=".", color="black", linestyle="-")
+    # plt.plot(q_list, marker=".", color=color_q, linestyle="-")
+    # plt.plot(m_list, marker=".", color=color_m, linestyle="-")
+    plt.plot(prev_dot_list, marker=".", linestyle="-")
+    # plt.plot(eps_list, marker=".", color="red", linestyle="-")
 
     del xs
     del ys
     del ground_truth_theta
 
 plt.xlabel("iter.")
+plt.yscale('log')
+plt.xscale('log')
+plt.ylabel(r'$\|\hat{w}^{t+1} - \hat{w}^{t} \|_2^2$')
 plt.legend()
 plt.grid()
 

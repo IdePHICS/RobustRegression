@@ -1,15 +1,14 @@
 import robust_regression.sweeps.alpha_sweeps as alsw
 import matplotlib.pyplot as plt
+from scipy.special import erf, erfc
+from robust_regression.fixed_point_equations.fpe_L2_regularization import var_func_L2
 from robust_regression.fixed_point_equations.fpe_L2_loss import (
-    var_func_L2,
     var_hat_func_L2_decorrelated_noise,
 )
 from robust_regression.fixed_point_equations.fpe_L1_loss import (
-    var_func_L2,
     var_hat_func_L1_decorrelated_noise,
 )
 from robust_regression.fixed_point_equations.fpe_Huber_loss import (
-    var_func_L2,
     var_hat_func_Huber_decorrelated_noise,
 )
 import numpy as np
@@ -21,14 +20,16 @@ from robust_regression.aux_functions.stability_functions import (
 
 
 def condition_MP(alphas):
-    return -(1- np.sqrt(alphas))**2
+    return -((1 - np.sqrt(alphas)) ** 2)
 
 
 def sigma_order_param(m, q, sigma):
     return sigma
 
+
 def q_order_param(m, q, sigma):
     return q
+
 
 def m_order_param(m, q, sigma):
     return m
@@ -57,12 +58,17 @@ delta_in, delta_out, percentage, beta = 1.0, 5.0, 0.3, 0.0
 #     funs_args=[{}],
 # )
 
-alphas, f_min_vals, reg_param_opt, (sigmas, qs, ms) = alsw.sweep_alpha_optimal_lambda_fixed_point(
+(
+    alphas,
+    f_min_vals,
+    reg_param_opt,
+    (sigmas, qs, ms),
+) = alsw.sweep_alpha_optimal_lambda_fixed_point(
     var_func_L2,
     var_hat_func_L1_decorrelated_noise,
-    0.01,
-    100,
-    100,
+    0.1,
+    10000,
+    250,
     3.0,
     {"reg_param": 3.0},
     {
@@ -104,43 +110,90 @@ for idx, rp in enumerate(reg_param_opt):
 
 plt.figure(figsize=(10, 10))
 
-plt.subplot(311)
-plt.title("Regression, L1 loss, L2 noise, $\\alpha$ sweep, $\\Delta_{{in}} = {}$, $\\Delta_{{out}} = {}$, $\\beta = {}$".format(delta_in, delta_out, beta))
-plt.plot(alphas, f_min_vals)
+plt.subplot(211)
+plt.title(
+    "Regression, L1 loss, L2 noise, $\\alpha$ sweep, $\\Delta_{{in}} = {}$, $\\Delta_{{out}} = {}$, $\\beta = {}$".format(
+        delta_in, delta_out, beta
+    )
+)
+small_sqrt = delta_in - 2 * ms + qs + 1
+large_sqrt = delta_out - 2 * ms * beta + qs + beta**2
+small_exp = -(sigmas**2) / (2 * small_sqrt)
+large_exp = -(sigmas**2) / (2 * large_sqrt)
+small_erf = sigmas / np.sqrt(2 * small_sqrt)
+large_erf = sigmas / np.sqrt(2 * large_sqrt)
+
+# plt.plot(alphas, f_min_vals)
+plt.plot(alphas, ms, label=r"$m$")
+plt.plot(alphas, qs, label=r"$q$")
+plt.plot(alphas, sigmas, label=r"$\Sigma$")
+plt.plot(
+    alphas,
+    (alphas / sigmas) * ((1 - percentage) * erf(small_erf) + beta * percentage * erf(large_erf)),
+    label=r"$\hat m$",
+)
+plt.plot(
+    alphas,
+    alphas * ((1 - percentage) * erfc(small_erf) + percentage * erfc(large_erf))
+    + alphas
+    / sigmas**2
+    * (
+        (
+            (1 - percentage) * (small_sqrt) * erf(small_erf)
+            + percentage * (large_sqrt) * erf(large_erf)
+        )
+        - np.exp(
+            np.log(sigmas)
+            + 0.5 * np.log(2)
+            - 0.5 * np.log(np.pi)
+            + np.log(
+                (1 - percentage) * np.sqrt(small_sqrt) * np.exp(small_exp)
+                + percentage * np.sqrt(large_sqrt) * np.exp(large_exp)
+            )
+        )
+    ),
+    label=r"$\hat q$",
+)
+plt.plot(
+    alphas,
+    (alphas / sigmas) * ((1 - percentage) * erf(small_erf) + percentage * erf(large_erf)),
+    label=r"$\hat \Sigma$",
+)
 plt.yscale("log")
 plt.xscale("log")
 plt.ylabel(r"$E_{gen}$")
+plt.legend()
 plt.grid()
 
-plt.subplot(312)
+plt.subplot(212)
 plt.plot(alphas, reg_param_opt, label=r"$\lambda_{opt}$")
 # plt.plot(alphas_ls, last_reg_param_stable, label=r"$\lambda_{stable}$")
 # plt.plot(alphas, hub_param_opt, label=r"$\alpha_{opt}$")
 # plt.plot(alphas, condition_MP(alphas), label=r"$min (0, 1-\alpha) $")
 plt.axvline(alphas[first_idx], color="red")
 plt.xscale("log")
-plt.ylim([-20,8])
+plt.ylim([-20, 8])
 plt.ylabel(r"$\lambda_{opt}$")
 plt.legend()
 plt.grid()
 
-plt.subplot(313)
-# plt.plot(alphas, sigmas, label=r"$\Sigma$")
-# plt.plot(alphas, 1 - alphas * (sigmas / (sigmas + 1))**2, label=r"$1 - \alpha \Sigma^2 / (\Sigma + 1)^2$")
-plt.plot(alphas, stability_l1_l2(ms, qs, sigmas, alphas, reg_param_opt, delta_in, delta_out, percentage, beta), label=r"Stability")
-plt.legend()
-plt.axvline(alphas[first_idx], color="red")
-plt.xscale("log")
-plt.grid()
-# plt.ylabel(r"$1 - \alpha \Sigma^2 / (\Sigma + 1)^2$")
-plt.ylabel(r"Stability cond.")
-plt.xlabel(r"$\alpha$")
+# plt.subplot(313)
+# # plt.plot(alphas, sigmas, label=r"$\Sigma$")
+# # plt.plot(alphas, 1 - alphas * (sigmas / (sigmas + 1))**2, label=r"$1 - \alpha \Sigma^2 / (\Sigma + 1)^2$")
+# plt.plot(alphas, stability_l1_l2(ms, qs, sigmas, alphas, reg_param_opt, delta_in, delta_out, percentage, beta), label=r"Stability")
+# plt.legend()
+# plt.axvline(alphas[first_idx], color="red")
+# plt.xscale("log")
+# plt.grid()
+# # plt.ylabel(r"$1 - \alpha \Sigma^2 / (\Sigma + 1)^2$")
+# plt.ylabel(r"Stability cond.")
+# plt.xlabel(r"$\alpha$")
 
 plt.show()
 
-np.savetxt(
-    "./simulations/data/TEST_alpha_sweep_L1.csv",
-    np.array([alphas, f_min_vals, reg_param_opt]).T,
-    delimiter=",",
-    header="alpha, f_min, lambda_opt",
-)
+# np.savetxt(
+#     "./simulations/data/TEST_alpha_sweep_L1.csv",
+#     np.array([alphas, f_min_vals, reg_param_opt]).T,
+#     delimiter=",",
+#     header="alpha, f_min, lambda_opt",
+# )

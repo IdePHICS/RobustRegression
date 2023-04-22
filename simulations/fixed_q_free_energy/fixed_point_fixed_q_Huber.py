@@ -34,9 +34,6 @@ m_hats = np.empty_like(qs_theoretical)
 q_hats = np.empty_like(qs_theoretical)
 sigma_hats = np.empty_like(qs_theoretical)
 
-repetitions = 3
-qs_numerical = np.linspace(1, 100, N_num)
-
 plt.figure(figsize=(10, 7.5))
 
 for reg_param in reg_params[::-1]:

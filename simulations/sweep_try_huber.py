@@ -1,17 +1,15 @@
 import robust_regression.sweeps.alpha_sweeps as alsw
 import matplotlib.pyplot as plt
 from robust_regression.fixed_point_equations.fpe_L2_loss import (
-    var_func_L2,
     var_hat_func_L2_decorrelated_noise,
 )
 from robust_regression.fixed_point_equations.fpe_L1_loss import (
-    var_func_L2,
     var_hat_func_L1_decorrelated_noise,
 )
 from robust_regression.fixed_point_equations.fpe_Huber_loss import (
-    var_func_L2,
     var_hat_func_Huber_decorrelated_noise,
 )
+from robust_regression.fixed_point_equations.fpe_L2_regularization import var_func_L2
 import numpy as np
 from robust_regression.aux_functions.stability_functions import (
     stability_ridge,
@@ -36,7 +34,7 @@ def m_order_param(m, q, sigma):
     return m
 
 
-delta_in, delta_out, percentage, beta = 1.0, 5.0, 0.3, 0.0
+delta_in, delta_out, percentage, beta = 1.0, 5.0, 0.1, 0.0
 
 
 # alphas, f_min_vals, (reg_param_opt, hub_param_opt), (sigmas,) = alsw.sweep_alpha_optimal_lambda_hub_param_fixed_point(
@@ -70,7 +68,7 @@ delta_in, delta_out, percentage, beta = 1.0, 5.0, 0.3, 0.0
     0.01,
     100,
     100,
-    [3.0, 1.0],
+    [3.0, 3.0],
     {"reg_param": 3.0},
     {
         "delta_in": delta_in,

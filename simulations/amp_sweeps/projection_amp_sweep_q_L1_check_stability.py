@@ -23,6 +23,7 @@ from robust_regression.regression_numerics.amp_funcs import (
     GAMP_algorithm_unsimplified_mod,
     GAMP_algorithm_unsimplified_mod_2,
     GAMP_algorithm_unsimplified_mod_3,
+    GAMP_algorithm_unsimplified_mod_4,
 )
 import numpy as np
 import matplotlib.pyplot as plt
@@ -30,18 +31,17 @@ import robust_regression.fixed_point_equations as fpe
 from robust_regression.utils.errors import ConvergenceError
 from robust_regression.regression_numerics.numerics import gen_error_data, train_error_data
 
-print("here")
+print(" here ")
 
 abs_tol = 1e-8
 min_iter = 100
 max_iter = 10000
 blend = 0.85
 
-# f_out_args = (1.0, 5.0, 0.3, 0.0)
-
-n_features = 2000
+n_features = 1000
 d = n_features
-repetitions = 3
+repetitions = 10
+max_iter_amp = 1000
 
 alpha, delta_in, delta_out, percentage, beta = 2.0, 1.0, 5.0, 0.3, 0.0
 n_samples = max(int(np.around(n_features * alpha)), 1)
@@ -53,14 +53,17 @@ train_err_mean_amp = list()
 train_err_std_amp = list()
 iters_nb_mean_amp = list()
 iters_nb_std_amp = list()
+stab_criterion_mean = list()
+stab_criterion_std = list()
 
-qs_amp_test = np.logspace(-1, 0.5, 15)
+qs_amp_test = np.logspace(-1, np.log10(2), 10)
 
 for idx, q in enumerate(qs_amp_test):
     print(f"--- q = {q}")
     all_gen_err = list()
     all_train_err = list()
     all_iters_nb = list()
+    all_stab_criterion = list()
 
     for _ in range(repetitions):
         xs, ys, _, _, ground_truth_theta = dg.data_generation(
@@ -94,15 +97,22 @@ for idx, q in enumerate(qs_amp_test):
             if iter_nb > max_iter:
                 raise ConvergenceError("fixed_point_finder", iter_nb)
 
-        print(f"q = {q}, m = {m}")
+        print(f" q = {q}, m = {m} ")
         init_w = m * ground_truth_theta + np.sqrt(q - m**2) * np.random.normal(size=n_features)
 
-        while not np.isclose([np.mean(init_w **2), np.mean(init_w * ground_truth_theta)], [q, m], rtol=1e-4, atol=1e-4).all():
+        while not np.isclose([np.mean(init_w **2), np.mean(init_w * ground_truth_theta)], [q, m], rtol=0.0, atol=1e-4).all():
             init_w = m * ground_truth_theta + np.sqrt(q - m**2) * np.random.normal(size=n_features)
 
-        print("found ")
+        print(" found ")
+
+        ehm = 3
+        if q > 0.5:
+            ehm = 10
+        elif q > 1.3:
+            ehm = 20
+
         # we want to initialize them at the fixed point so:
-        estimated_theta, iters_nb = GAMP_algorithm_unsimplified_mod_3(
+        estimated_theta, iters_nb, previous_ones = GAMP_algorithm_unsimplified_mod_4(
             sigma,
             f_w_projection_on_sphere,
             Df_w_projection_on_sphere,
@@ -112,11 +122,12 @@ for idx, q in enumerate(qs_amp_test):
             xs,
             (q,),
             list(),
-            init_w, # m * ground_truth_theta + np.sqrt(q - m**2) * np.random.normal(size=n_features), # np.sqrt(q - m**2) *
+            init_w,
             ground_truth_theta,
             abs_tol=1e-2,
-            max_iter=500,
+            max_iter=max_iter_amp,
             blend=1.0,
+            each_how_many=ehm
         )
 
         print("iter_nb", iters_nb)
@@ -129,6 +140,15 @@ for idx, q in enumerate(qs_amp_test):
 
         all_iters_nb.append(iters_nb)
 
+        if iter_nb != max_iter_amp + 1:
+            all_all_stab_criterion = list()
+            for kdx in range(int(len(previous_ones) / 2)):
+                eps_1 = np.mean((previous_ones[2 * kdx] - estimated_theta)**2)
+                eps_2 = np.mean((previous_ones[2 * kdx + 1] - estimated_theta)**2)
+                all_all_stab_criterion.append(1 - eps_2 / eps_1)
+                
+            all_stab_criterion.append(np.mean(all_all_stab_criterion))
+
         del xs
         del ys
         del ground_truth_theta
@@ -140,6 +160,8 @@ for idx, q in enumerate(qs_amp_test):
     train_err_std_amp.append(np.std(all_train_err))
     iters_nb_mean_amp.append(np.mean(all_iters_nb))
     iters_nb_std_amp.append(np.std(all_iters_nb))
+    stab_criterion_mean.append(np.mean(all_stab_criterion))
+    stab_criterion_std.append(np.std(all_stab_criterion))
 
 # save the results of AMP in a file with the delta_in, delta_out, percentage, beta, alpha,n_features, repetitions parameters
 # np.savetxt(
@@ -211,17 +233,9 @@ for idx, q in enumerate(qs):
         training_error[idx:] = np.nan
         break
 
-# save the results of the AMP experiment in a csv file in the folder simulations/data
-# np.savetxt(
-#     "./simulations/data/projection_amp_sweep_q_L1.csv",
-#     np.array([gen_err_q, gen_err_mean, gen_err_std, train_err_mean, train_err_std]).T,
-#     delimiter=",",
-#     header="q,gen_err_mean,gen_err_std,train_err_mean,train_err_std",
-# )
 
-
-plt.figure(figsize=(10, 10))
-plt.subplot(211)
+# plot the values
+plt.figure(figsize=(6.5, 4.5))
 plt.title(
     "L1 loss Projective Denoiser"
     + " d = {:d}".format(n_features)
@@ -239,63 +253,47 @@ plt.title(
     + "{:.2f}".format(alpha)
 )
 
-color = next(plt.gca()._get_lines.prop_cycler)["color"]
-plt.errorbar(
-    qs_amp,
-    gen_err_mean_amp,
-    yerr=gen_err_std_amp,
-    label="AMP Generalization Error reps={:d}".format(repetitions),
-    color=color,
-    linestyle="",
-    marker=".",
-)
-plt.plot(qs, 1 + qs - 2 * ms, label="Theoretical Generalization Error", color=color, linestyle="-")
+# color = next(plt.gca()._get_lines.prop_cycler)["color"]
+# plt.errorbar(
+#     qs_amp,
+#     gen_err_mean_amp,
+#     yerr=gen_err_std_amp,
+#     label="AMP Generalization Error reps={:d}".format(repetitions),
+#     color=color,
+#     linestyle="",
+#     marker=".",
+# )
+# plt.plot(qs, 1 + qs - 2 * ms, label="Theoretical Generalization Error", color=color, linestyle="-")
+
+# color = next(plt.gca()._get_lines.prop_cycler)["color"]
+# plt.errorbar(
+#     qs_amp,
+#     train_err_mean_amp,
+#     yerr=train_err_std_amp,
+#     label="AMP Training Error reps={:d}".format(repetitions),
+#     color=color,
+#     linestyle="",
+#     marker=".",
+# )
+# plt.plot(qs, training_error, label="Theoretical Training Error", color=color, linestyle="-")
 
 color = next(plt.gca()._get_lines.prop_cycler)["color"]
-plt.errorbar(
-    qs_amp,
-    train_err_mean_amp,
-    yerr=train_err_std_amp,
-    label="AMP Training Error reps={:d}".format(repetitions),
-    color=color,
-    linestyle="",
-    marker=".",
-)
-plt.plot(qs, training_error, label="Theoretical Training Error", color=color, linestyle="-")
 stab_vals = stability_l1_l2(ms, qs, sigmas, alpha, 1.0, delta_in, delta_out, percentage, beta)
 plt.plot(
     qs,
     stab_vals,
     label="stability",
+    color=color
 )
+plt.errorbar(qs_amp, stab_criterion_mean, yerr=stab_criterion_std, color=color, label="stab. AMP reps = {:d}".format(repetitions), linestyle="", marker=".")
 idx = np.amin(np.arange(len(stab_vals))[stab_vals < 0])
 plt.axvline(qs[idx], color="black", linestyle="--", label="stability threshold")
 
 plt.xlabel("q")
 # plt.yscale("log")
 plt.xscale("log")
-plt.ylim(-0.5, 7.5)
+plt.ylim(-0.5, 2.5)
 plt.legend()
 plt.grid()
-
-
-plt.subplot(212)
-plt.errorbar(
-    qs_amp,
-    iters_nb_mean_amp,
-    yerr=iters_nb_std_amp,
-    label="AMP iterations reps={:d}".format(repetitions),
-    linestyle="",
-    marker=".",
-)
-
-plt.xlabel("q")
-plt.ylabel("iterations")
-plt.yscale("log")
-plt.xscale("log")
-# plt.ylim(-0.5, 7.5)
-plt.legend()
-plt.grid()
-
 
 plt.show()

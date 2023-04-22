@@ -6,18 +6,19 @@ from robust_regression.aux_functions.prior_regularization_funcs import (
     Df_w_projection_on_sphere,
 )
 from robust_regression.fixed_point_equations.fpe_L1_loss import var_hat_func_L1_decorrelated_noise
+from robust_regression.fixed_point_equations.fpe_Huber_loss import var_hat_func_Huber_decorrelated_noise
 from robust_regression.fixed_point_equations.fpe_projection_denoising import (
     var_func_projection_denoising,
 )
 from robust_regression.aux_functions.misc import damped_update
-from robust_regression.aux_functions.likelihood_channel_functions import f_out_L1, Df_out_L1
-from robust_regression.aux_functions.loss_functions import l1_loss
+from robust_regression.aux_functions.likelihood_channel_functions import f_out_L1, Df_out_L1, f_out_Huber, Df_out_Huber
+from robust_regression.aux_functions.loss_functions import l1_loss, huber_loss
 from robust_regression.aux_functions.stability_functions import (
     stability_l1_l2,
     stability_huber,
     stability_ridge,
 )
-from robust_regression.aux_functions.training_errors import training_error_l1_loss
+from robust_regression.aux_functions.training_errors import training_error_l1_loss, training_error_huber_loss
 from robust_regression.regression_numerics.amp_funcs import (
     GAMP_algorithm_unsimplified,
     GAMP_algorithm_unsimplified_mod,
@@ -39,11 +40,11 @@ blend = 0.85
 
 # f_out_args = (1.0, 5.0, 0.3, 0.0)
 
-n_features = 2000
+n_features = 5000
 d = n_features
 repetitions = 3
 
-alpha, delta_in, delta_out, percentage, beta = 2.0, 1.0, 5.0, 0.3, 0.0
+alpha, delta_in, delta_out, percentage, beta, a = 2.0, 1.0, 5.0, 0.3, 0.0, 1.3
 n_samples = max(int(np.around(n_features * alpha)), 1)
 
 qs_amp = list()
@@ -54,7 +55,7 @@ train_err_std_amp = list()
 iters_nb_mean_amp = list()
 iters_nb_std_amp = list()
 
-qs_amp_test = np.logspace(-1, 0.5, 15)
+qs_amp_test = np.logspace(-2, 0.5, 10)
 
 for idx, q in enumerate(qs_amp_test):
     print(f"--- q = {q}")
@@ -106,13 +107,13 @@ for idx, q in enumerate(qs_amp_test):
             sigma,
             f_w_projection_on_sphere,
             Df_w_projection_on_sphere,
-            f_out_L1,
-            Df_out_L1,
+            f_out_Huber,
+            Df_out_Huber,
             ys,
             xs,
             (q,),
-            list(),
-            init_w, # m * ground_truth_theta + np.sqrt(q - m**2) * np.random.normal(size=n_features), # np.sqrt(q - m**2) *
+            (a,),
+            init_w,
             ground_truth_theta,
             abs_tol=1e-2,
             max_iter=500,
@@ -124,7 +125,7 @@ for idx, q in enumerate(qs_amp_test):
         all_gen_err.append(gen_error_data(ys, xs, estimated_theta, ground_truth_theta))
 
         all_train_err.append(
-            train_error_data(ys, xs, estimated_theta, ground_truth_theta, l1_loss, list())
+            train_error_data(ys, xs, estimated_theta, ground_truth_theta, huber_loss, (a,))
         )
 
         all_iters_nb.append(iters_nb)
@@ -159,7 +160,7 @@ for idx, q in enumerate(qs_amp_test):
 #     header="q,gen_err_mean,gen_err_std,train_err_mean,train_err_std,iters_nb_mean,iters_nb_std",
 # )
 
-qs = np.logspace(-1, 1, 500)
+qs = np.logspace(-2.5, 2, 1000)
 ms = np.empty_like(qs)
 sigmas = np.empty_like(qs)
 m_hats = np.empty_like(qs)
@@ -178,8 +179,8 @@ for idx, q in enumerate(qs):
         iter_nb = 0
         err = 100.0
         while err > abs_tol or iter_nb < min_iter:
-            m_hat, q_hat, sigma_hat = var_hat_func_L1_decorrelated_noise(
-                m, q, sigma, alpha, delta_in, delta_out, percentage, beta
+            m_hat, q_hat, sigma_hat = var_hat_func_Huber_decorrelated_noise(
+                m, q, sigma, alpha, delta_in, delta_out, percentage, beta, a
             )
             new_m, _, new_sigma = var_func_projection_denoising(m_hat, q_hat, sigma_hat, q)
 
@@ -198,8 +199,8 @@ for idx, q in enumerate(qs):
         sigma_hats[idx] = sigma_hat
         q_hats[idx] = q_hat
 
-        training_error[idx] = training_error_l1_loss(
-            m, q, sigma, delta_in, delta_out, percentage, beta
+        training_error[idx] = training_error_huber_loss(
+            m, q, sigma, delta_in, delta_out, percentage, beta, a
         )
     except (ConvergenceError, ValueError) as e:
         print(e)
@@ -211,6 +212,7 @@ for idx, q in enumerate(qs):
         training_error[idx:] = np.nan
         break
 
+
 # save the results of the AMP experiment in a csv file in the folder simulations/data
 # np.savetxt(
 #     "./simulations/data/projection_amp_sweep_q_L1.csv",
@@ -221,9 +223,8 @@ for idx, q in enumerate(qs):
 
 
 plt.figure(figsize=(10, 10))
-plt.subplot(211)
 plt.title(
-    "L1 loss Projective Denoiser"
+    "Huber a={:.2f} loss Projective Denoiser".format(a)
     + " d = {:d}".format(n_features)
     + r" $\alpha$ = "
     + "{:.2f}".format(alpha)
@@ -235,8 +236,6 @@ plt.title(
     + "{:.2f}".format(percentage)
     + r" $\beta$ = "
     + "{:.2f}".format(beta)
-    + r" $\alpha$ = "
-    + "{:.2f}".format(alpha)
 )
 
 color = next(plt.gca()._get_lines.prop_cycler)["color"]
@@ -262,38 +261,20 @@ plt.errorbar(
     marker=".",
 )
 plt.plot(qs, training_error, label="Theoretical Training Error", color=color, linestyle="-")
+
 stab_vals = stability_l1_l2(ms, qs, sigmas, alpha, 1.0, delta_in, delta_out, percentage, beta)
 plt.plot(
     qs,
     stab_vals,
     label="stability",
 )
-idx = np.amin(np.arange(len(stab_vals))[stab_vals < 0])
-plt.axvline(qs[idx], color="black", linestyle="--", label="stability threshold")
+# idx = np.amin(np.arange(len(stab_vals))[stab_vals < 0])
+# plt.axvline(qs[idx], color="black", linestyle="--", label="stability threshold")
 
 plt.xlabel("q")
 # plt.yscale("log")
 plt.xscale("log")
-plt.ylim(-0.5, 7.5)
-plt.legend()
-plt.grid()
-
-
-plt.subplot(212)
-plt.errorbar(
-    qs_amp,
-    iters_nb_mean_amp,
-    yerr=iters_nb_std_amp,
-    label="AMP iterations reps={:d}".format(repetitions),
-    linestyle="",
-    marker=".",
-)
-
-plt.xlabel("q")
-plt.ylabel("iterations")
-plt.yscale("log")
-plt.xscale("log")
-# plt.ylim(-0.5, 7.5)
+plt.ylim([-0.5,5])
 plt.legend()
 plt.grid()
 

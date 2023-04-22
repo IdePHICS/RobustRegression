@@ -7,7 +7,7 @@ from robust_regression.regression_numerics.numerics import (
     train_error_data,
 )
 from scipy.signal import find_peaks
-from robust_regression.aux_functions.misc import huber_loss
+from robust_regression.aux_functions.loss_functions import huber_loss
 from robust_regression.aux_functions.stability_functions import stability_l1_l2, stability_huber, stability_ridge
 from robust_regression.regression_numerics.data_generation import measure_gen_decorrelated
 from robust_regression.fixed_point_equations.fpe_Huber_loss import (
@@ -29,12 +29,14 @@ max_iter = 100000
 min_iter = 100
 abs_tol = 1e-8
 
-delta_in, delta_out, percentage, beta, a = 1.0, 5.0, 0.0, 0.0, 0.05
-alpha = 5.0
+delta_in, delta_out, percentage, beta, a = 1.0, 5.0, 0.3, 0.0, 1.0
+alpha = 30.0
+reg_param = -1.5
 
 N = 3000
-qs = np.logspace(-1, 3, N)
+qs = np.logspace(-2, 3, N)
 training_error = np.empty_like(qs)
+generalization_error = np.empty_like(qs)
 ms = np.empty_like(qs)
 sigmas = np.empty_like(qs)
 m_hats = np.empty_like(qs)
@@ -77,7 +79,9 @@ for idx, q in enumerate(qs):
 
         training_error[idx] = training_error_huber_loss(
             m, q, sigma, delta_in, delta_out, percentage, beta, a
-        )
+        ) + reg_param / (2 * alpha) * q
+        generalization_error[idx] = 1 - 2 * m + q
+
     except (ConvergenceError, ValueError) as e:
         ms[idx:] = np.nan
         sigmas[idx:] = np.nan
@@ -89,46 +93,59 @@ for idx, q in enumerate(qs):
 
 min_idx = np.argmin(training_error)
 
-m_true, q_true, sigma_true = fixed_point_finder(
-    var_func_projection_denoising,
-    var_hat_func_Huber_decorrelated_noise,
-    (ms[min_idx], qs[min_idx], sigmas[min_idx]),
-    {"q_fixed": qs[min_idx]},
-    {
-        "alpha": alpha,
-        "delta_in": delta_in,
-        "delta_out": delta_out,
-        "percentage": percentage,
-        "beta": beta,
-        "a": a,
-    },
-)
+# m_true, q_true, sigma_true = fixed_point_finder(
+#     var_func_projection_denoising,
+#     var_hat_func_Huber_decorrelated_noise,
+#     (ms[min_idx], qs[min_idx], sigmas[min_idx]),
+#     {"q_fixed": qs[min_idx]},
+#     {
+#         "alpha": alpha,
+#         "delta_in": delta_in,
+#         "delta_out": delta_out,
+#         "percentage": percentage,
+#         "beta": beta,
+#         "a": a,
+#     },
+# )
 
-m_hat_true, q_hat_true, sigma_hat_true = var_hat_func_Huber_decorrelated_noise(
-    m_true, q_true, sigma_true, alpha, delta_in, delta_out, percentage, beta, a
-)
+# m_hat_true, q_hat_true, sigma_hat_true = var_hat_func_Huber_decorrelated_noise(
+#     m_true, q_true, sigma_true, alpha, delta_in, delta_out, percentage, beta, a
+# )
 
-training_error_true = training_error_huber_loss(
-    m_true, q_true, sigma_true, delta_in, delta_out, percentage, beta, a
-)
+# training_error_true = training_error_huber_loss(
+#     m_true, q_true, sigma_true, delta_in, delta_out, percentage, beta, a
+# )
 
-print("q_true = ", q_true)
+# print("q_true = ", q_true, qs[min_idx])
 
 color = next(plt.gca()._get_lines.prop_cycler)["color"]
 
 # plt.axhline(training_error_true, linestyle="--", color=color, alpha=0.5)
 # plt.axvline(q_true, linestyle="--", color=color, alpha=0.5)
 
-reg_param = -0.01
+# reg_param = -1.5
 
-peaks = find_peaks(-(training_error + reg_param / (2 * alpha) * qs))
+# peaks = find_peaks(-(training_error + reg_param / (2 * alpha) * qs))
+
+peaks = find_peaks(-training_error)
 print(peaks)
 for p in peaks[0]:
+    print("qs min ", qs[p])
     plt.axvline(qs[p], linestyle="--", color=color, alpha=0.5)
 
-plt.plot(qs, training_error + reg_param / (2 * alpha) * qs, color=color, label="training error lambda = {:.2f}".format(reg_param))
+# plt.plot(qs, training_error + reg_param / (2 * alpha) * qs, color=color, label="training error lambda = {:.2f}".format(reg_param))
+plt.plot(qs, training_error, color=color, label="training error lambda = {:.2f}".format(reg_param))
 
-plt.plot(qs, stability_huber(ms, qs, sigmas, alpha, 1.0, delta_in, delta_out, percentage, beta, a), label="stability")
+plt.plot(qs, stability_huber(ms, qs, sigmas, alpha, reg_param, delta_in, delta_out, percentage, beta, a), label="stability")
+
+np.savetxt(
+    "./simulations/data/Huber_decorrelated_noise_alpha={:.2f}_delta_in={:.2f}_delta_out={:.2f}_percentage={:.2f}_beta={:.2f}_a={:.2f}_reg_param={:.2f}.csv".format(
+        alpha, delta_in, delta_out, percentage, beta, a, reg_param
+    ),
+    np.vstack([qs, training_error, generalization_error, ms, sigmas, m_hats, q_hats, sigma_hats]).T,
+    delimiter=",",
+    header="q,training_error,generalization_error,m,sigma,m_hat,q_hat,sigma_hat",
+)
 
 # plt.plot(qs, training_error, color=color)
 # plt.plot(qs, sigmas, label="sigma")
@@ -204,7 +221,7 @@ plt.xlabel("q")
 plt.xscale("log")
 # plt.yscale("log")
 plt.legend()
-plt.ylim([-1.0, 2])
+plt.ylim([-1.0, 6])
 plt.grid()
 
 plt.show()

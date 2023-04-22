@@ -27,7 +27,7 @@ def sigma_order_param(m, q, sigma):
     return sigma
 
 
-delta_in, delta_out, percentage, beta = 1.0, 1.0, 0.99, 0.5
+delta_in, delta_out, percentage, beta = 1.0, 5.0, 0.3, 0.0
 
 
 # alphas, f_min_vals, (reg_param_opt, hub_param_opt), (sigmas,) = alsw.sweep_alpha_optimal_lambda_hub_param_fixed_point(
@@ -81,8 +81,8 @@ gen_error_std_l2 = list()
 alphas, f_min_vals, reg_param_opt, (ms, qs, sigmas,) = alsw.sweep_alpha_optimal_lambda_fixed_point(
     var_func_L2,
     var_hat_func_L2_decorrelated_noise,
-    1,
-    10000,
+    1000,
+    1000000,
     100,
     3.0,
     {"reg_param": 3.0},
@@ -105,13 +105,29 @@ for idx, rp in enumerate(reg_param_opt):
 
 plt.figure(figsize=(6, 6))
 
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+# Convert the data to log-log scale
+x_log = np.log10(alphas)
+y_log = np.log10(np.abs(reg_param_opt))
+
+# Fit a straight line to the data in log-log scale
+coefficients = np.polyfit(x_log, y_log, 1)
+slope = coefficients[0]
+intercept = coefficients[1]
+
+# Plot the data and the fitted line
+print(slope, intercept)
+
+
 plt.subplot(2, 1, 1)
 plt.title(
-    "L2 loss, L2 reg, $\\alpha$ sweep, $\\delta_{{in}} = {}$, $\\delta_{{out}} = {}$, $\\epsilon = {}$, $\\beta = {}$".format(
+    "L2 loss, L2 reg, $\\alpha$ sweep, $\\Delta_{{in}} = {}$, $\\Delta_{{out}} = {}$, $\\epsilon = {}$, $\\beta = {}$".format(
         delta_in, delta_out, percentage, beta
     )
 )
-# plt.plot(alphas, alphas * (1-beta) * percentage/ (2*(beta-1) + 2), label="ema")
 plt.plot(alphas, np.abs(reg_param_opt), label="$\\|\\lambda_{{opt}}\\|$")
 plt.plot(
     alphas,
@@ -128,20 +144,66 @@ plt.xscale("log")
 plt.ylabel(r"$\lambda_{opt}$")
 plt.legend()
 plt.yscale("log")
+plt.xlabel("$\\alpha$")
 plt.grid()
+
+
+alphas_c, _, reg_param_opt_c, (ms_c, qs_c, sigmas_c,) = alsw.sweep_alpha_optimal_lambda_fixed_point(
+    var_func_L2,
+    var_hat_func_L2_decorrelated_noise,
+    1,
+    10000,
+    100,
+    3.0,
+    {"reg_param": 3.0},
+    {
+        "delta_in": delta_in,
+        "delta_out": delta_out,
+        "percentage": percentage,
+        "beta": 1.0,
+    },
+    initial_cond_fpe=(0.6, 0.01, 0.9),
+    funs=[m_order_param, q_order_param, sigma_order_param],
+    funs_args=[{}, {}, {}],
+)
+
+alphas_cc, _, reg_param_opt_cc, (ms_cc, qs_cc, sigmas_cc,) = alsw.sweep_alpha_optimal_lambda_fixed_point(
+    var_func_L2,
+    var_hat_func_L2_decorrelated_noise,
+    1,
+    10000,
+    100,
+    3.0,
+    {"reg_param": 3.0},
+    {
+        "delta_in": delta_in,
+        "delta_out": delta_out,
+        "percentage": percentage,
+        "beta": 1.0,
+    },
+    initial_cond_fpe=(0.6, 0.01, 0.9),
+    funs=[m_order_param, q_order_param, sigma_order_param],
+    funs_args=[{}, {}, {}],
+)
 
 plt.subplot(2, 1, 2)
 plt.plot(
     alphas,
-    reg_param_opt + np.abs(
+    reg_param_opt + (
         alphas
         * percentage
         / (sigmas+1)
     ),
     label="$\\lambda_{{opt}} + \\alpha \\epsilon Z_{{out}}$",
 )
+
+plt.plot(alphas_c, reg_param_opt_c, label="1")
+plt.plot(alphas_c, percentage * reg_param_opt_c, label="2")
+plt.plot(alphas_c, (1 - percentage) * reg_param_opt_c, label="3")
+
 plt.xscale("log")
 plt.legend()
+plt.xlabel("$\\alpha$")
 plt.grid()
 
 plt.show()

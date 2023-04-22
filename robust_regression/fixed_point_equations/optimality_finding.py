@@ -34,7 +34,7 @@ def find_optimal_reg_param_function(
     copy_var_func_kwargs = var_func_kwargs.copy()
 
     def minimize_fun(reg_param):
-        copy_var_func_kwargs.update({"reg_param": reg_param})
+        copy_var_func_kwargs.update({"reg_param": float(reg_param)})
         m, q, sigma = fixed_point_finder(
             var_func,
             var_hat_func,
@@ -57,7 +57,7 @@ def find_optimal_reg_param_function(
         fun_min_val = obj.fun
         reg_param_opt = obj.x
 
-        copy_var_func_kwargs.update({"reg_param": reg_param_opt})
+        copy_var_func_kwargs.update({"reg_param": float(reg_param_opt)})
         out_values = empty(n_observables)
         m, q, sigma = fixed_point_finder(
             var_func,

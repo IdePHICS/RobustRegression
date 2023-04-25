@@ -37,8 +37,6 @@ min_iter = 100
 max_iter = 10000
 blend = 0.85
 
-# f_out_args = (1.0, 5.0, 0.3, 0.0)
-
 n_features = 2000
 d = n_features
 repetitions = 3
@@ -54,7 +52,7 @@ train_err_std_amp = list()
 iters_nb_mean_amp = list()
 iters_nb_std_amp = list()
 
-qs_amp_test = np.logspace(-1, 0.5, 15)
+qs_amp_test = np.logspace(-1, 0.0, 5)
 
 for idx, q in enumerate(qs_amp_test):
     print(f"--- q = {q}")

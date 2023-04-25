@@ -102,22 +102,32 @@ print("q_true = ", q_true)
 
 color = next(plt.gca()._get_lines.prop_cycler)["color"]
 
-reg_param = -0.05
+# reg_param = -0.05
 
 # plt.axhline(training_error_true, linestyle="--", color=color, alpha=0.5)
 # plt.axvline(q_true, linestyle="--", color=color, alpha=0.5)
 
-peaks = find_peaks(-(training_error + reg_param / (2 * alpha) * qs))
-print(peaks)
-for p in peaks[0]:
-    plt.axvline(qs[p], linestyle="--", color=color, alpha=0.5)
+# peaks = find_peaks(-(training_error + reg_param / (2 * alpha) * qs))
+# print(peaks)
+# for p in peaks[0]:
+#     plt.axvline(qs[p], linestyle="--", color=color, alpha=0.5)
 
-plt.plot(qs, training_error + reg_param / (2 * alpha) * qs, color=color, label="training error lambda ={:.2f}".format(reg_param))
+plt.plot(qs, ms, label="m")
+plt.plot(qs, sigmas, label="sigma")
+plt.plot(qs, m_hats, label="m_hat")
+plt.plot(qs, sigma_hats, label="sigma_hat")
+plt.plot(qs, q_hats, label="q_hat")
 
-plt.plot(qs, stability_l1_l2(ms, qs, sigmas, alpha, 1.0, delta_in, delta_out, percentage, beta), label="stability")
+# plt.plot(qs, training_error + reg_param / (2 * alpha) * qs, color=color, label="training error lambda ={:.2f}".format(reg_param))
+
+# plt.plot(qs, stability_l1_l2(ms, qs, sigmas, alpha, 1.0, delta_in, delta_out, percentage, beta), label="stability")
 
 # qss = np.logspace(2, 5, 100)
 # plt.plot(qss, 0.05 * np.sqrt(qss), label="0.05 * sqrt(q)")
+
+
+
+# check if the values match for L2 denoiser at negative lambda and projective denoiser
 
 # reg_param = 0.0
 
@@ -151,7 +161,7 @@ plt.xlabel("q")
 plt.xscale("log")
 # plt.yscale("log")
 plt.legend()
-plt.ylim([-0.5, 2])
+# plt.ylim([-0.5, 2])
 plt.grid()
 
 plt.show()

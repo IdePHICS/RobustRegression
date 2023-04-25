@@ -40,7 +40,7 @@ blend = 0.85
 
 n_features = 1000
 d = n_features
-repetitions = 10
+repetitions = 3
 max_iter_amp = 1000
 
 alpha, delta_in, delta_out, percentage, beta = 2.0, 1.0, 5.0, 0.3, 0.0
@@ -56,7 +56,7 @@ iters_nb_std_amp = list()
 stab_criterion_mean = list()
 stab_criterion_std = list()
 
-qs_amp_test = np.logspace(-1, np.log10(2), 10)
+qs_amp_test = np.logspace(-1, np.log10(1), 5)
 
 for idx, q in enumerate(qs_amp_test):
     print(f"--- q = {q}")

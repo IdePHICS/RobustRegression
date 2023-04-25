@@ -1,4 +1,19 @@
-from numpy import divide, identity, sqrt, abs, count_nonzero, sum, dot, ones_like, inf, tile, finfo, float64
+from numpy import (
+    divide,
+    identity,
+    sqrt,
+    abs,
+    count_nonzero,
+    sum,
+    dot,
+    ones_like,
+    inf,
+    tile,
+    finfo,
+    float64,
+    empty,
+    sum,
+)
 import numpy.linalg as LA
 from numpy.random import normal
 from numba import njit
@@ -77,17 +92,15 @@ def find_coefficients_Huber(ys, xs, reg_param, a):
     )
 
     if opt_res.status == 2:
-        raise ValueError(
-            "HuberRegressor convergence failed: l-BFGS-b solver terminated with %s"
-            % opt_res.message
-        )
+        raise ValueError("HuberRegressor convergence failed: l-BFGS-b solver terminated with %s" % opt_res.message)
 
     return opt_res.x
 
 
-def find_coefficients_Huber_on_sphere(ys, xs, reg_param, q_fixed, a, gamma = 1e-04):
+# not checked
+def find_coefficients_Huber_on_sphere(ys, xs, reg_param, q_fixed, a, gamma=1e-04):
     _, d = xs.shape
-    w = normal(loc=0.0, scale=1.0, size=(d,)) 
+    w = normal(loc=0.0, scale=1.0, size=(d,))
     w = w / sqrt(LA.norm(w)) * sqrt(q_fixed)
     xs_norm = divide(xs, sqrt(d))
 
@@ -95,7 +108,7 @@ def find_coefficients_Huber_on_sphere(ys, xs, reg_param, q_fixed, a, gamma = 1e-
     iter = 0
     while iter < MAX_ITER_MINIMIZE and LA.norm(grad) > GTOL_MINIMIZE:
         if iter % 10 == 0:
-            print(str(iter) + 'th Iteration  Loss :: ' + str(loss) + ' gradient :: ' +  str(LA.norm(grad)))
+            print(str(iter) + "th Iteration  Loss :: " + str(loss) + " gradient :: " + str(LA.norm(grad)))
 
         alpha = 1
         new_w = w - alpha * grad
@@ -114,3 +127,47 @@ def find_coefficients_Huber_on_sphere(ys, xs, reg_param, q_fixed, a, gamma = 1e-
         iter += 1
 
     return w
+
+
+def vanillaGD_Huber(
+    ys,
+    xs,
+    reg_param: float,
+    a: float,
+    lr: float,
+    w_init,
+    max_iters: int,
+    save_run: bool = False,
+    ground_truth_theta=None,
+):
+    n, d = xs.shape
+    xs_norm = divide(xs, sqrt(d))
+    w = w_init
+
+    if save_run:
+        if ground_truth_theta is None:
+            raise ValueError("ground_truth_theta is None, if save_run is True, ground_truth_theta must be provided")
+
+        losses = empty(max_iters + 1)
+        qs = empty(max_iters + 1)
+        gen_errors = empty(max_iters + 1)
+
+        losses[0], _ = _loss_and_gradient_Huber(w, xs_norm, ys, reg_param, a)
+        losses[0] /= n
+        gen_errors[0] = sum((ground_truth_theta - w) ** 2) / d
+        qs[0] = sum(w**2) / d
+
+    for t in range(1, max_iters + 1):
+        loss, gradient = _loss_and_gradient_Huber(w, xs_norm, ys, reg_param, a)
+
+        if save_run:
+            losses[t] = loss / n
+            gen_errors[t] = sum((ground_truth_theta - w) ** 2) / d
+            qs[t] = sum(w**2) / d
+
+        w = w - lr * gradient
+
+    if save_run:
+        return w, losses, qs, gen_errors
+    else:
+        return w

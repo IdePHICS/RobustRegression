@@ -31,22 +31,14 @@ def var_hat_func_L1_double_noise(m, q, sigma, alpha, delta_in, delta_out, percen
 
     # probabily should change it
     m_hat = (alpha / sigma) * ((1 - percentage) * erf(small_erf) + percentage * erf(large_erf))
-    q_hat = alpha * (
-        (1 - percentage) * erfc(small_erf) + percentage * erfc(large_erf)
-    ) + alpha / sigma**2 * (
-        (
-            (1 - percentage) * (small_sqrt) * erf(small_erf)
-            + percentage * (large_sqrt) * erf(large_erf)
-        )
+    q_hat = alpha * ((1 - percentage) * erfc(small_erf) + percentage * erfc(large_erf)) + alpha / sigma**2 * (
+        ((1 - percentage) * (small_sqrt) * erf(small_erf) + percentage * (large_sqrt) * erf(large_erf))
         - exp(
             log(sigma)
             + 0.5 * log(2)
             - 0.5 * log(pi)
             + 0.5 * log(large_sqrt)
-            + log(
-                (1 - percentage) * sqrt(small_sqrt / large_sqrt) * exp(small_exp)
-                + percentage * exp(large_exp)
-            )
+            + log((1 - percentage) * sqrt(small_sqrt / large_sqrt) * exp(small_exp) + percentage * exp(large_exp))
         )
     )
     sigma_hat = (alpha / sigma) * ((1 - percentage) * erf(small_erf) + percentage * erf(large_erf))
@@ -62,25 +54,22 @@ def var_hat_func_L1_decorrelated_noise(m, q, sigma, alpha, delta_in, delta_out, 
     small_erf = sigma / sqrt(2 * small_sqrt)
     large_erf = sigma / sqrt(2 * large_sqrt)
 
-    m_hat = (alpha / sigma) * (
-        (1 - percentage) * erf(small_erf) + beta * percentage * erf(large_erf)
-    )
-    q_hat = alpha * (
-        (1 - percentage) * erfc(small_erf) + percentage * erfc(large_erf)
-    ) + alpha / sigma**2 * (
-        (
-            (1 - percentage) * (small_sqrt) * erf(small_erf)
-            + percentage * (large_sqrt) * erf(large_erf)
-        )
+    m_hat = (alpha / sigma) * ((1 - percentage) * erf(small_erf) + beta * percentage * erf(large_erf))
+    q_hat = alpha * ((1 - percentage) * erfc(small_erf) + percentage * erfc(large_erf)) + alpha / sigma**2 * (
+        ((1 - percentage) * (small_sqrt) * erf(small_erf) + percentage * (large_sqrt) * erf(large_erf))
         - exp(
             log(sigma)
             + 0.5 * log(2)
             - 0.5 * log(pi)
-            + log(
-                (1 - percentage) * sqrt(small_sqrt) * exp(small_exp)
-                + percentage * sqrt(large_sqrt) * exp(large_exp)
-            )
+            + log((1 - percentage) * sqrt(small_sqrt) * exp(small_exp) + percentage * sqrt(large_sqrt) * exp(large_exp))
         )
     )
     sigma_hat = (alpha / sigma) * ((1 - percentage) * erf(small_erf) + percentage * erf(large_erf))
     return m_hat, q_hat, sigma_hat
+
+
+@njit
+def x_next_plateau_L1(x, delta_in, delta_out, percentage, beta):
+    y_in = delta_in + percentage**2 * x**2
+    y_out = delta_out + (percentage * x + 1) ** 2
+    return -1 / ((1 - percentage) * sqrt(y_out / y_in) + percentage)

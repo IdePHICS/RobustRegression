@@ -76,3 +76,13 @@ def var_hat_func_Huber_decorrelated_noise(
         (1 - percentage) * erf(small_erf) + percentage * erf(large_erf)
     )
     return m_hat, q_hat, sigma_hat
+
+
+@njit
+def x_next_plateau_Huber(x, delta_in, delta_out, percentage, beta, a):
+    y_in = delta_in + percentage**2 * x**2
+    y_out = delta_out + (percentage * x + 1) ** 2
+    return -1.0 / (
+        (1.0 - percentage) * erf(a / sqrt(2 * y_in)) / erf(a / sqrt(2 * y_out))
+        + percentage
+    )

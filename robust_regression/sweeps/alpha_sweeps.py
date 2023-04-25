@@ -37,9 +37,7 @@ def sweep_alpha_fixed_point(
 
     if alpha_min > alpha_max:
         raise ValueError(
-            "alpha_min should be smaller than alpha_max, in this case are {:f} and {:f}".format(
-                alpha_min, alpha_max
-            )
+            "alpha_min should be smaller than alpha_max, in this case are {:f} and {:f}".format(alpha_min, alpha_max)
         )
 
     if alpha_min <= 0:
@@ -100,9 +98,7 @@ def sweep_alpha_optimal_lambda_fixed_point(
 
     if alpha_min > alpha_max:
         raise ValueError(
-            "alpha_min should be smaller than alpha_max, in this case are {:f} and {:f}".format(
-                alpha_min, alpha_max
-            )
+            "alpha_min should be smaller than alpha_max, in this case are {:f} and {:f}".format(alpha_min, alpha_max)
         )
 
     if alpha_min <= 0:
@@ -188,9 +184,7 @@ def sweep_alpha_optimal_lambda_hub_param_fixed_point(
 
     if alpha_min > alpha_max:
         raise ValueError(
-            "alpha_min should be smaller than alpha_max, in this case are {:f} and {:f}".format(
-                alpha_min, alpha_max
-            )
+            "alpha_min should be smaller than alpha_max, in this case are {:f} and {:f}".format(alpha_min, alpha_max)
         )
 
     if alpha_min <= 0:
@@ -360,9 +354,7 @@ def sweep_alpha_descend_lambda(
 ):
     if alpha_min > alpha_max:
         raise ValueError(
-            "alpha_min should be smaller than alpha_max, in this case are {:f} and {:f}".format(
-                alpha_min, alpha_max
-            )
+            "alpha_min should be smaller than alpha_max, in this case are {:f} and {:f}".format(alpha_min, alpha_max)
         )
 
     if alpha_min <= 0:
@@ -456,9 +448,7 @@ def sweep_alpha_minimal_stable_reg_param(
 ):
     if alpha_min > alpha_max:
         raise ValueError(
-            "alpha_min should be smaller than alpha_max, in this case are {:f} and {:f}".format(
-                alpha_min, alpha_max
-            )
+            "alpha_min should be smaller than alpha_max, in this case are {:f} and {:f}".format(alpha_min, alpha_max)
         )
 
     if alpha_min <= 0:
@@ -492,9 +482,7 @@ def sweep_alpha_minimal_stable_reg_param(
         copy_var_hat_func_kwargs.update({"alpha": alpha})
 
         not_converged_idx = 0
-        reg_params_test = linspace(
-            bounds_reg_param_search[0], bounds_reg_param_search[1], points_per_run
-        )
+        reg_params_test = linspace(bounds_reg_param_search[0], bounds_reg_param_search[1], points_per_run)
 
         for jdx, reg_param in enumerate(reg_params_test[::-1]):
             copy_var_func_kwargs.update({"reg_param": reg_param})
@@ -509,10 +497,7 @@ def sweep_alpha_minimal_stable_reg_param(
                 )
                 old_initial_cond = tuple([m, q, sigma])
 
-                if (
-                    condition_func(m, q, sigma, **copy_var_func_kwargs, **copy_var_hat_func_kwargs)
-                    <= 0.0
-                ):
+                if condition_func(m, q, sigma, **copy_var_func_kwargs, **copy_var_hat_func_kwargs) <= 0.0:
                     not_converged_idx = points_per_run - 1 - jdx
                     break
 

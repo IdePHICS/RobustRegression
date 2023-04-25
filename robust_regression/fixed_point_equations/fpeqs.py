@@ -33,3 +33,23 @@ def fixed_point_finder(
             raise ConvergenceError("fixed_point_finder", iter_nb)
 
     return m, q, sigma
+
+
+def plateau_fixed_point_finder(
+        x_next_func,
+        inital_condition: float,
+        x_next_func_kwargs: dict,
+        abs_tol: float = TOL_FPE,
+        min_iter: int = MIN_ITER_FPE,
+        max_iter: int = MAX_ITER_FPE,
+):
+    x = inital_condition
+    err = 1.0
+    iter_nb = 0
+    while err > abs_tol or iter_nb < min_iter:
+        x_next = x_next_func(x, **x_next_func_kwargs)
+        err = abs(x_next - x)
+        x = x_next
+        if iter_nb > max_iter:
+            raise ConvergenceError("plateau_fixed_point_finder", iter_nb)
+    return x

@@ -3,7 +3,7 @@ from numpy import pi
 from math import sqrt, exp, erf, erfc, log, sinh
 from numba import njit
 
-
+# these functions need to be checked
 # @njit
 def free_energy(
     Psi_w,

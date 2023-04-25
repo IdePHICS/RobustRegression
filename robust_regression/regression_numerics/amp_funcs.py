@@ -61,6 +61,64 @@ def GAMP_algorithm_unsimplified(
     return w_hat_t
 
 
+@njit
+def GAMP_unsimplified_iters(
+    f_w: callable,
+    Df_out: callable,
+    Df_w: callable,
+    f_out: callable,
+    ys: ndarray,
+    xs: ndarray,
+    f_w_args: tuple,
+    f_out_args: tuple,
+    init_w_hat,
+    multiplier_c_w: float,
+    abs_tol=TOL_GAMP,
+    max_iter=MAX_ITER_GAMP,
+    blend=BLEND_GAMP,
+):
+    _, d = xs.shape
+
+    F = xs / sqrt(d)
+    F2 = F**2
+
+    # start from the init 
+    w_hat_t = init_w_hat
+    c_w_t = multiplier_c_w * ones(d)
+
+    V_t = F2 @ c_w_t
+    omega_t = F @ w_hat_t
+    f_out_t_1 = f_out(ys, omega_t, V_t, *f_out_args)
+
+    err = 1.0
+    iter_nb = 0
+    while err > abs_tol:
+        V_t = F2 @ c_w_t
+        omega_t = (F @ w_hat_t) - (V_t * f_out_t_1)
+
+        f_out_t = f_out(ys, omega_t, V_t, *f_out_args)
+        Df_out_t = Df_out(ys, omega_t, V_t, *f_out_args)
+
+        Lambda_t = -Df_out_t @ F2
+        gamma_t = (f_out_t @ F) + (Lambda_t * w_hat_t)
+
+        new_w_hat_t = f_w(gamma_t, Lambda_t, *f_w_args)
+        new_c_w_t = Df_w(gamma_t, Lambda_t, *f_w_args)
+
+        err = mean(abs(new_w_hat_t - w_hat_t))
+
+        w_hat_t = damped_update(new_w_hat_t, w_hat_t, blend)
+        c_w_t = damped_update(new_c_w_t, c_w_t, blend)
+        # update the onsager term with damping?
+        f_out_t_1 = f_out_t
+
+        iter_nb += 1
+        if iter_nb > max_iter:
+            return w_hat_t, iter_nb
+
+    return w_hat_t, iter_nb
+
+
 def GAMP_algorithm_unsimplified_mod(
     multiplier_c_w: float,
     f_w: callable,
@@ -130,7 +188,7 @@ def GAMP_algorithm_unsimplified_mod(
 
     return w_hat_t
 
-# @njit()
+
 def GAMP_algorithm_unsimplified_mod_2(
     multiplier_c_w: float,
     f_w: callable,

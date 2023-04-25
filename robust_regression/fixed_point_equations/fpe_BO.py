@@ -1,11 +1,11 @@
 from numba import njit
 import numpy as np
 from scipy.integrate import dblquad
-from utils.integration_utils import (
+from ..utils.integration_utils import (
     divide_integration_borders_multiple_grid,
     find_integration_borders_square,
 )
-from aux_functions.likelihood_channel_functions import (
+from ..aux_functions.likelihood_channel_functions import (
     Z_out_Bayes_decorrelated_noise,
     f_out_Bayes_decorrelated_noise,
 )

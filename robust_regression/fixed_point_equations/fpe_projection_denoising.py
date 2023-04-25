@@ -7,3 +7,4 @@ def var_func_projection_denoising(m_hat, q_hat, sigma_hat, q_fixed):
     q = q_fixed
     sigma = sqrt(q_fixed / (q_hat + m_hat**2))
     return m, q, sigma
+

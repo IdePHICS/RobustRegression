@@ -16,13 +16,21 @@ def sweep_reg_param_fixed_point(
     initial_cond=(0.6, 0.01, 0.9),
     funs=[gen_error],
     funs_args=[list()],
+    update_funs_args=None,
     linear=False,
     decreasing=True,
 ):
-    if len(funs) != len(funs_args):
+    if update_funs_args is None:
+        update_funs_args = [False] * len(funs)
+
+    n_funs = len(funs)
+    n_funs_args = len(funs_args)
+    n_update_funs_args = len(update_funs_args)
+
+    if not (n_funs == n_funs_args == n_update_funs_args):
         raise ValueError(
-            "The length of funs and funs_args should be the same, in this case is {:d} and {:d}".format(
-                len(funs), len(funs_args)
+            "funs, funs_args and update_funs_args should have the same length, in this case are {:d}, {:d} and {:d}".format(
+                n_funs, n_funs_args, n_update_funs_args
             )
         )
 
@@ -57,6 +65,7 @@ def sweep_reg_param_fixed_point(
     out_list = [empty(n_reg_param_pts) for _ in range(n_observables)]
 
     copy_var_func_kwargs = var_func_kwargs.copy()
+    copy_funs_args = funs_args.copy()
 
     not_converged_flag = False
     old_initial_cond = initial_cond
@@ -77,8 +86,12 @@ def sweep_reg_param_fixed_point(
 
                 old_initial_cond = tuple([m, q, sigma])
 
-                for jdx, (f, f_args) in enumerate(zip(funs, funs_args)):
-                    out_list[jdx][idx] = f(m, q, sigma, *f_args)
+                for jdx, (f, f_args, update_flag) in enumerate(zip(funs, funs_args, update_funs_args)):
+                    if update_flag:
+                        copy_funs_args[jdx].update({"reg_param" : reg_param})
+                        out_list[jdx][idx] = f(m, q, sigma, **copy_funs_args[jdx])
+                    else:
+                        out_list[jdx][idx] = f(m, q, sigma, **f_args)
 
         except ConvergenceError:
             not_converged_flag = True

@@ -8,6 +8,9 @@ from math import log10
 from ..aux_functions.misc import gen_error
 
 
+# add function to sweep over q in the state evolution
+
+
 def sweep_fw_first_arg_GAMP(
     f_w: callable,
     Df_w: callable,

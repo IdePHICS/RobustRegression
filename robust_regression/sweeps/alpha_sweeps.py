@@ -15,6 +15,7 @@ from ..fixed_point_equations.optimality_finding import (
 )
 import numpy as np
 
+
 def sweep_alpha_fixed_point(
     var_func,
     var_hat_func,
@@ -25,13 +26,21 @@ def sweep_alpha_fixed_point(
     var_hat_func_kwargs: dict,
     initial_cond_fpe=(0.6, 0.01, 0.9),
     funs=[gen_error],
-    funs_args=[list()],
+    funs_args=[{}],
+    update_funs_args=None,
     decreasing=False,
 ):
-    if len(funs) != len(funs_args):
+    if update_funs_args is None:
+        update_funs_args = [False] * len(funs)
+    
+    n_funs = len(funs)
+    n_funs_args = len(funs_args)
+    n_update_funs_args = len(update_funs_args)
+
+    if not (n_funs == n_funs_args == n_update_funs_args):
         raise ValueError(
-            "The length of funs and funs_args should be the same, in this case is {:d} and {:d}".format(
-                len(funs), len(funs_args)
+            "The length of funs, funs_args and update_funs_args should be the same, in this case is {:d}, {:d} and {:d}".format(
+                n_funs, n_funs_args, n_update_funs_args
             )
         )
 
@@ -62,8 +71,12 @@ def sweep_alpha_fixed_point(
         )
         old_initial_cond = tuple(ms_qs_sigmas[idx])
         m, q, sigma = ms_qs_sigmas[idx]
-        for jdx, (f, f_args) in enumerate(zip(funs, funs_args)):
-            out_list[jdx][idx] = f(m, q, sigma, **f_args)
+        for jdx, (f, f_args, update_flag) in enumerate(zip(funs, funs_args, update_funs_args)):
+            if update_flag:
+                f_args.update({"m": m, "q": q, "sigma": sigma})
+                out_list[jdx][idx] = f(m, q, sigma, **f_args)
+            else:
+                out_list[jdx][idx] = f(m, q, sigma, **f_args)
 
     if decreasing:
         alphas = alphas[::-1]
@@ -84,16 +97,25 @@ def sweep_alpha_optimal_lambda_fixed_point(
     var_hat_func_kwargs: dict,
     initial_cond_fpe=(0.6, 0.01, 0.9),
     funs=[gen_error],
-    funs_args=[list()],
+    funs_args=[{}],
+    update_funs_args=None,
     f_min=gen_error,
-    f_min_args=(),
+    f_min_args={},
+    update_f_min_args=False,
     min_reg_param=SMALLEST_REG_PARAM,
     decreasing=False,
 ):
-    if len(funs) != len(funs_args):
+    if update_funs_args is None:
+        update_funs_args = [False] * len(funs)
+
+    n_funs = len(funs)
+    n_funs_args = len(funs_args)
+    n_update_funs_args = len(update_funs_args)
+
+    if not (n_funs == n_funs_args == n_update_funs_args):
         raise ValueError(
-            "The length of funs and funs_args should be the same, in this case is {:d} and {:d}".format(
-                len(funs), len(funs_args)
+            "The length of funs, funs_args and update_funs_args should be the same, in this case is {:d}, {:d} and {:d}".format(
+                n_funs, n_funs_args, n_update_funs_args
             )
         )
 
@@ -117,13 +139,21 @@ def sweep_alpha_optimal_lambda_fixed_point(
 
     copy_var_func_kwargs = var_func_kwargs.copy()
     copy_var_hat_func_kwargs = var_hat_func_kwargs.copy()
+    copy_funs_args = funs_args.copy()
 
     old_initial_cond_fpe = initial_cond_fpe
     old_reg_param_opt = inital_guess_lambda
     for idx, alpha in enumerate(alphas):
         print(f"alpha = {alpha}")
         copy_var_hat_func_kwargs.update({"alpha": float(alpha)})
-        copy_var_func_kwargs.update({"reg_param": np.random.rand(1)+0.0001}) # float(old_reg_param_opt)
+        copy_var_func_kwargs.update({"reg_param": np.random.rand(1) + 0.0001})
+
+        if update_f_min_args:
+            f_min_args.update({"alpha": float(alpha)})
+
+        for jdx, update_flag in enumerate(update_funs_args):
+            if update_flag:
+                copy_funs_args[jdx].update({"alpha": float(alpha)})
 
         (
             f_min_vals[idx],
@@ -138,7 +168,7 @@ def sweep_alpha_optimal_lambda_fixed_point(
             old_reg_param_opt,
             old_initial_cond_fpe,
             funs=funs,
-            funs_args=funs_args,
+            funs_args=copy_funs_args,
             f_min=f_min,
             f_min_args=f_min_args,
             min_reg_param=min_reg_param,
@@ -171,16 +201,25 @@ def sweep_alpha_optimal_lambda_hub_param_fixed_point(
     initial_cond_fpe=(0.6, 0.01, 0.9),
     funs=[gen_error],
     funs_args=[list()],
+    update_funs_args=None,
     f_min=gen_error,
     f_min_args=(),
+    update_f_min_args=False,
     min_reg_param=SMALLEST_REG_PARAM,
     min_huber_param=SMALLEST_HUBER_PARAM,
     decreasing=False,
 ):
-    if len(funs) != len(funs_args):
+    if update_funs_args is None:
+        update_funs_args = [False] * len(funs)
+
+    n_funs = len(funs)
+    n_funs_args = len(funs_args)
+    n_update_funs_args = len(update_funs_args)
+
+    if not (n_funs == n_funs_args == n_update_funs_args):
         raise ValueError(
-            "The length of funs and funs_args should be the same, in this case is {:d} and {:d}".format(
-                len(funs), len(funs_args)
+            "The length of funs, funs_args and update_funs_args should be the same, in this case is {:d}, {:d} and {:d}".format(
+                n_funs, n_funs_args, n_update_funs_args
             )
         )
 
@@ -205,6 +244,7 @@ def sweep_alpha_optimal_lambda_hub_param_fixed_point(
 
     copy_var_func_kwargs = var_func_kwargs.copy()
     copy_var_hat_func_kwargs = var_hat_func_kwargs.copy()
+    copy_funs_args = funs_args.copy()
 
     old_initial_cond_fpe = initial_cond_fpe
     old_reg_param_opt = inital_guess_params[0]
@@ -213,6 +253,13 @@ def sweep_alpha_optimal_lambda_hub_param_fixed_point(
         print(f"alpha = {alpha}")
         copy_var_hat_func_kwargs.update({"alpha": alpha, "a": old_hub_param_opt})
         copy_var_func_kwargs.update({"reg_param": old_reg_param_opt})
+
+        if update_f_min_args:
+            f_min_args.update({"alpha": alpha})
+
+        for jdx, update_flag in enumerate(update_funs_args):
+            if update_flag:
+                copy_funs_args[jdx].update({"alpha": alpha})
 
         (
             f_min_vals[idx],
@@ -227,7 +274,7 @@ def sweep_alpha_optimal_lambda_hub_param_fixed_point(
             (old_reg_param_opt, old_hub_param_opt),
             old_initial_cond_fpe,
             funs=funs,
-            funs_args=funs_args,
+            funs_args=copy_funs_args,
             f_min=f_min,
             f_min_args=f_min_args,
             min_reg_param=min_reg_param,

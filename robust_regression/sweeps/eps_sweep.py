@@ -21,9 +21,12 @@ def sweep_eps_fixed_point(
     initial_cond=(0.6, 0.01, 0.9),
     funs=[gen_error],
     funs_args=[list()],
-    update_funs_args=[False],
+    update_funs_args=None,
     decreasing=False,
 ):
+    if update_funs_args is None:
+        update_funs_args = [False] * len(funs)
+
     n_funs = len(funs)
     n_funs_args = len(funs_args)
     n_update_funs_args = len(update_funs_args)
@@ -91,13 +94,16 @@ def sweep_eps_optimal_lambda_fixed_point(
     initial_cond_fpe=(0.6, 0.01, 0.9),
     funs=[gen_error],
     funs_args=[list()],
-    update_funs_args=[False],
+    update_funs_args=None,
     f_min=gen_error,
     f_min_args={},
     update_f_min_args=False,
     min_reg_param=SMALLEST_REG_PARAM,
     decreasing=False,
 ):
+    if update_funs_args is None:
+        update_funs_args = [False] * len(funs)
+
     n_funs = len(funs)
     n_funs_args = len(funs_args)
     n_update_funs_args = len(update_funs_args)
@@ -126,7 +132,7 @@ def sweep_eps_optimal_lambda_fixed_point(
 
     copy_var_func_kwargs = var_func_kwargs.copy()
     copy_var_hat_func_kwargs = var_hat_func_kwargs.copy()
-    # copy_funs_args = funs_args.copy()
+    copy_funs_args = funs_args.copy()
 
     old_initial_cond_fpe = initial_cond_fpe
     old_reg_param_opt = inital_guess_lambda
@@ -138,9 +144,9 @@ def sweep_eps_optimal_lambda_fixed_point(
         if update_f_min_args:
             f_min_args.update({"percentage": float(eps)})
 
-        # for jdx, update_flag in enumerate(update_funs_args):
-        #     if update_flag:
-        #         copy_funs_args.update({"percentage": float(eps)})
+        for jdx, update_flag in enumerate(update_funs_args):
+            if update_flag:
+                copy_funs_args[jdx].update({"percentage": float(eps)})
 
         (
             f_min_vals[idx],
@@ -155,7 +161,7 @@ def sweep_eps_optimal_lambda_fixed_point(
             old_reg_param_opt,
             old_initial_cond_fpe,
             funs=funs,
-            funs_args=funs_args,
+            funs_args=copy_funs_args,
             f_min=f_min,
             f_min_args=f_min_args,
             min_reg_param=min_reg_param,
@@ -188,6 +194,7 @@ def sweep_eps_optimal_lambda_hub_param_fixed_point(
     initial_cond_fpe=(0.6, 0.01, 0.9),
     funs=[gen_error],
     funs_args=[list()],
+    update_funs_args=None,
     f_min=gen_error,
     f_min_args=(),
     min_reg_param=SMALLEST_REG_PARAM,
@@ -195,10 +202,17 @@ def sweep_eps_optimal_lambda_hub_param_fixed_point(
     decreasing=False,
     update_f_min_args=False,
 ):
-    if len(funs) != len(funs_args):
+    if update_funs_args is None:
+        update_funs_args = [False] * len(funs)
+
+    n_funs = len(funs)
+    n_funs_args = len(funs_args)
+    n_update_funs_args = len(update_funs_args)
+
+    if not (n_funs == n_funs_args == n_update_funs_args):
         raise ValueError(
-            "The length of funs and funs_args should be the same, in this case is {:d} and {:d}".format(
-                len(funs), len(funs_args)
+            "The length of funs, funs_args and update_funs_args should be the same, in this case is {:d}, {:d} and {:d}".format(
+                n_funs, n_funs_args, n_update_funs_args
             )
         )
 
@@ -220,6 +234,7 @@ def sweep_eps_optimal_lambda_hub_param_fixed_point(
 
     copy_var_func_kwargs = var_func_kwargs.copy()
     copy_var_hat_func_kwargs = var_hat_func_kwargs.copy()
+    copy_funs_args = funs_args.copy()
 
     old_initial_cond_fpe = initial_cond_fpe
     old_reg_param_opt = inital_guess_params[0]
@@ -231,6 +246,10 @@ def sweep_eps_optimal_lambda_hub_param_fixed_point(
 
         if update_f_min_args:
             f_min_args.update({"percentage": float(eps)})
+
+        for jdx, update_flag in enumerate(update_funs_args):
+            if update_flag:
+                copy_funs_args[jdx].update({"percentage": float(eps)})
 
         (
             f_min_vals[idx],
@@ -245,7 +264,7 @@ def sweep_eps_optimal_lambda_hub_param_fixed_point(
             (old_reg_param_opt, old_hub_param_opt),
             old_initial_cond_fpe,
             funs=funs,
-            funs_args=funs_args,
+            funs_args=copy_funs_args,
             f_min=f_min,
             f_min_args=f_min_args,
             min_reg_param=min_reg_param,

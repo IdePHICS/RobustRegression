@@ -20,14 +20,21 @@ def sweep_delta_out_fixed_point(
     var_hat_func_kwargs: dict,
     initial_cond=(0.6, 0.01, 0.9),
     funs=[gen_error],
-    funs_args=[list()],
+    funs_args=[{}],
+    update_funs_args=None,
     decreasing=False,
-    update_f_args=False,
 ):
-    if len(funs) != len(funs_args):
+    if update_funs_args is None:
+        update_funs_args = [False] * len(funs)
+
+    n_funs = len(funs)
+    n_funs_args = len(funs_args)
+    n_update_funs_args = len(update_funs_args)
+
+    if not (n_funs == n_funs_args == n_update_funs_args):
         raise ValueError(
-            "The length of funs and funs_args should be the same, in this case is {:d} and {:d}".format(
-                len(funs), len(funs_args)
+            "The length of funs, funs_args and update_funs_args should be the same, in this case is {:d}, {:d} and {:d}".format(
+                n_funs, n_funs_args, n_update_funs_args
             )
         )
 
@@ -50,9 +57,8 @@ def sweep_delta_out_fixed_point(
 
     old_initial_cond = initial_cond
     for idx, delta in enumerate(deltas):
-        copy_var_hat_func_kwargs.update({"delta_out": delta})
-
         print(f"delta_out = {delta}")
+        copy_var_hat_func_kwargs.update({"delta_out": delta})
 
         m, q, sigma = fixed_point_finder(
             var_func, var_hat_func, old_initial_cond, var_func_kwargs, copy_var_hat_func_kwargs
@@ -60,13 +66,12 @@ def sweep_delta_out_fixed_point(
 
         old_initial_cond = tuple([m, q, sigma])
 
-        for jdx, (f, f_args) in enumerate(zip(funs, funs_args)):
-            if update_f_args:
+        for jdx, (f, f_args, update_flag) in enumerate(zip(funs, funs_args, update_funs_args)):
+            if update_flag:
                 f_args.update({"delta_out": float(delta)})
                 out_list[jdx][idx] = f(m, q, sigma, **f_args)
             else:
                 out_list[jdx][idx] = f(m, q, sigma, **f_args)
-            # out_list[jdx][idx] = f(m, q, sigma, *f_args)
 
     if decreasing:
         deltas = deltas[::-1]
@@ -87,17 +92,25 @@ def sweep_delta_out_optimal_lambda_fixed_point(
     var_hat_func_kwargs: dict,
     initial_cond_fpe=(0.6, 0.01, 0.9),
     funs=[gen_error],
-    funs_args=[list()],
+    funs_args=[{}],
+    update_funs_args=None,
     f_min=gen_error,
-    f_min_args=(),
+    f_min_args={},
+    update_f_min_args=False,
     min_reg_param=SMALLEST_REG_PARAM,
     decreasing=False,
-    update_f_min_args=False,
 ):
-    if len(funs) != len(funs_args):
+    if update_funs_args is None:
+        update_funs_args = [False] * len(funs)
+
+    n_funs = len(funs)
+    n_funs_args = len(funs_args)
+    n_update_funs_args = len(update_funs_args)
+
+    if not (n_funs == n_funs_args == n_update_funs_args):
         raise ValueError(
-            "The length of funs and funs_args should be the same, in this case is {:d} and {:d}".format(
-                len(funs), len(funs_args)
+            "The length of funs, funs_args and update_funs_args should be the same, in this case is {:d}, {:d} and {:d}".format(
+                n_funs, n_funs_args, n_update_funs_args
             )
         )
 
@@ -120,17 +133,23 @@ def sweep_delta_out_optimal_lambda_fixed_point(
 
     copy_var_func_kwargs = var_func_kwargs.copy()
     copy_var_hat_func_kwargs = var_hat_func_kwargs.copy()
+    copy_funs_args = funs_args.copy()
 
     old_initial_cond_fpe = initial_cond_fpe
     old_reg_param_opt = inital_guess_lambda
     for idx, delta_out in enumerate(delta_outs):
         print(f"delta_out = {delta_out}")
+
         copy_var_hat_func_kwargs.update({"delta_out": delta_out})
         copy_var_func_kwargs.update({"reg_param": old_reg_param_opt})
 
         if update_f_min_args:
             f_min_args.update({"delta_out": delta_out})
-    
+
+        for jdx, update_flag in enumerate(update_funs_args):
+            if update_flag:
+                copy_funs_args[jdx].update({"delta_out": delta_out})
+
         (
             f_min_vals[idx],
             reg_params_opt[idx],
@@ -144,7 +163,7 @@ def sweep_delta_out_optimal_lambda_fixed_point(
             old_reg_param_opt,
             old_initial_cond_fpe,
             funs=funs,
-            funs_args=funs_args,
+            funs_args=copy_funs_args,
             f_min=f_min,
             f_min_args=f_min_args,
             min_reg_param=min_reg_param,
@@ -177,18 +196,26 @@ def sweep_delta_out_optimal_lambda_hub_param_fixed_point(
     var_hat_func_kwargs: dict,
     initial_cond_fpe=(0.6, 0.01, 0.9),
     funs=[gen_error],
-    funs_args=[list()],
+    funs_args=[{}],
+    update_funs_args=None,
     f_min=gen_error,
-    f_min_args=(),
+    f_min_args={},
+    update_f_min_args=False,
     min_reg_param=SMALLEST_REG_PARAM,
     min_huber_param=SMALLEST_HUBER_PARAM,
     decreasing=False,
-    update_f_min_args=False,
 ):
-    if len(funs) != len(funs_args):
+    if update_funs_args is None:
+        update_funs_args = [False] * len(funs)
+
+    n_funs = len(funs)
+    n_funs_args = len(funs_args)
+    n_update_funs_args = len(update_funs_args)
+
+    if not (n_funs == n_funs_args == n_update_funs_args):
         raise ValueError(
-            "The length of funs and funs_args should be the same, in this case is {:d} and {:d}".format(
-                len(funs), len(funs_args)
+            "The length of funs, funs_args and update_funs_args should be the same, in this case is {:d}, {:d} and {:d}".format(
+                n_funs, n_funs_args, n_update_funs_args
             )
         )
 
@@ -212,6 +239,7 @@ def sweep_delta_out_optimal_lambda_hub_param_fixed_point(
 
     copy_var_func_kwargs = var_func_kwargs.copy()
     copy_var_hat_func_kwargs = var_hat_func_kwargs.copy()
+    copy_funs_args = funs_args.copy()
 
     old_initial_cond_fpe = initial_cond_fpe
     old_reg_param_opt = inital_guess_params[0]
@@ -225,6 +253,9 @@ def sweep_delta_out_optimal_lambda_hub_param_fixed_point(
         if update_f_min_args:
             f_min_args.update({"delta_out": delta_out})
 
+        for jdx, update_flag in enumerate(update_funs_args):
+            if update_flag:
+                copy_funs_args[jdx].update({"delta_out": delta_out})
         (
             f_min_vals[idx],
             (reg_params_opt[idx], hub_params_opt[idx]),
@@ -238,7 +269,7 @@ def sweep_delta_out_optimal_lambda_hub_param_fixed_point(
             (old_reg_param_opt, old_hub_param_opt),
             old_initial_cond_fpe,
             funs=funs,
-            funs_args=funs_args,
+            funs_args=copy_funs_args,
             f_min=f_min,
             f_min_args=f_min_args,
             min_reg_param=min_reg_param,

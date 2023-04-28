@@ -13,7 +13,7 @@ from ..fixed_point_equations.optimality_finding import (
     find_optimal_reg_param_function,
     find_optimal_reg_and_huber_parameter_function,
 )
-
+import numpy as np
 
 def sweep_alpha_fixed_point(
     var_func,
@@ -55,6 +55,7 @@ def sweep_alpha_fixed_point(
 
     old_initial_cond = initial_cond_fpe
     for idx, alpha in enumerate(alphas):
+        print(f"alpha = {alpha}")
         var_hat_func_kwargs.update({"alpha": alpha})
         ms_qs_sigmas[idx] = fixed_point_finder(
             var_func, var_hat_func, old_initial_cond, var_func_kwargs, var_hat_func_kwargs
@@ -62,7 +63,7 @@ def sweep_alpha_fixed_point(
         old_initial_cond = tuple(ms_qs_sigmas[idx])
         m, q, sigma = ms_qs_sigmas[idx]
         for jdx, (f, f_args) in enumerate(zip(funs, funs_args)):
-            out_list[jdx][idx] = f(m, q, sigma, *f_args)
+            out_list[jdx][idx] = f(m, q, sigma, **f_args)
 
     if decreasing:
         alphas = alphas[::-1]
@@ -120,8 +121,9 @@ def sweep_alpha_optimal_lambda_fixed_point(
     old_initial_cond_fpe = initial_cond_fpe
     old_reg_param_opt = inital_guess_lambda
     for idx, alpha in enumerate(alphas):
+        print(f"alpha = {alpha}")
         copy_var_hat_func_kwargs.update({"alpha": float(alpha)})
-        copy_var_func_kwargs.update({"reg_param": float(old_reg_param_opt)})
+        copy_var_func_kwargs.update({"reg_param": np.random.rand(1)+0.0001}) # float(old_reg_param_opt)
 
         (
             f_min_vals[idx],
@@ -208,6 +210,7 @@ def sweep_alpha_optimal_lambda_hub_param_fixed_point(
     old_reg_param_opt = inital_guess_params[0]
     old_hub_param_opt = inital_guess_params[1]
     for idx, alpha in enumerate(alphas):
+        print(f"alpha = {alpha}")
         copy_var_hat_func_kwargs.update({"alpha": alpha, "a": old_hub_param_opt})
         copy_var_func_kwargs.update({"reg_param": old_reg_param_opt})
 

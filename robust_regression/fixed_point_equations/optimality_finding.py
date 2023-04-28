@@ -42,7 +42,7 @@ def find_optimal_reg_param_function(
             var_func_kwargs=copy_var_func_kwargs,
             var_hat_func_kwargs=var_hat_func_kwargs,
         )
-        return f_min(m, q, sigma, *f_min_args)
+        return f_min(m, q, sigma, **f_min_args)
 
     bnds = [(min_reg_param, None)]
     obj = minimize(
@@ -110,7 +110,7 @@ def find_optimal_reg_and_huber_parameter_function(
             var_func_kwargs=copy_var_func_kwargs,
             var_hat_func_kwargs=copy_var_hat_func_kwargs,
         )
-        return f_min(m, q, sigma, *f_min_args)
+        return f_min(m, q, sigma, **f_min_args)
 
     bnds = [(min_reg_param, None), (min_huber_param, None)]
     obj = minimize(

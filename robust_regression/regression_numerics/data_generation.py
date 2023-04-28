@@ -63,6 +63,7 @@ def data_generation(
     xs_gen = normal(loc=0.0, scale=1.0, size=(n_generalization, n_features))
 
     ys = measure_fun(False, theta_0_teacher, xs, *measure_fun_args)
-    ys_gen = measure_fun(True, theta_0_teacher, xs_gen, *measure_fun_args)
+    ys_gen = measure_fun(False, theta_0_teacher, xs_gen, *measure_fun_args)
+    # ys_gen = measure_fun(True, theta_0_teacher, xs_gen, *measure_fun_args)
 
     return xs, ys, xs_gen, ys_gen, theta_0_teacher

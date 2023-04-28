@@ -104,7 +104,7 @@ def var_hat_func_BO_num_decorrelated_noise(
         q_integral_BO_decorrelated_noise,
         np.sqrt((1 + max(delta_in, delta_out))),
         1.0,
-        (q, m, sigma, delta_in, delta_out, percentage, beta),
+        args=(q, m, sigma, delta_in, delta_out, percentage, beta),
     )
 
     # args = {"m": m, "q": q, "sigma": sigma}

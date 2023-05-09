@@ -1,5 +1,5 @@
-from ..aux_functions.misc import gen_error
-from numpy import logspace, empty
+from ..aux_functions.misc import estimation_error
+from numpy import logspace, empty, meshgrid
 from math import log10
 from typing import Tuple
 from ..fixed_point_equations import SMALLEST_REG_PARAM, SMALLEST_HUBER_PARAM
@@ -22,24 +22,57 @@ def sweep_eps_delta_out_optimal_lambda_fixed_point(
     var_hat_func_kwargs: dict,
     initial_guess_reg_param: float,
     initial_cond_fpe: Tuple[float, float, float],
-    funs=[gen_error],
+    funs=[estimation_error],
     funs_args=[{}],
-    f_min=gen_error,
+    update_funs_args=None,
+    f_min=estimation_error,
     f_min_args={},
+    update_f_min_args=True,
     min_reg_param=SMALLEST_REG_PARAM,
     decreasing=[False, True],
 ):
-    if len(funs) != len(funs_args):
+    # for a meshgrid application we have that the first index is connected to increase in y while the second index is connected to the increase in x
+    if update_funs_args is None:
+        update_funs_args = [False] * len(funs)
+
+    n_funs = len(funs)
+    n_funs_args = len(funs_args)
+    n_update_funs_args = len(update_funs_args)
+
+    if not (n_funs == n_funs_args == n_update_funs_args):
         raise ValueError(
-            "The length of funs and funs_args should be the same, in this case is {:d} and {:d}".format(
-                len(funs), len(funs_args)
+            "The length of funs, funs_args and update_funs_args should be the same, in this case is {:d}, {:d} and {:d}".format(
+                n_funs, n_funs_args, n_update_funs_args
             )
         )
 
     if len(decreasing) != 2:
+        raise ValueError("The length of decreasing should be 2, in this case is {:d}".format(len(decreasing)))
+
+    if eps_min <= 0.0 or eps_max <= 0.0:
         raise ValueError(
-            "The length of decreasing should be 2, in this case is {:d}".format(len(decreasing))
+            "eps_min and eps_max should be positive, in this case are {:f} and {:f}".format(eps_min, eps_max)
         )
+
+    if delta_out_min <= 0.0 or delta_out_max <= 0.0:
+        raise ValueError(
+            "delta_out_min and delta_out_max should be positive, in this case are {:f} and {:f}".format(
+                delta_out_min, delta_out_max
+            )
+        )
+
+    if n_eps_pts <= 0 or n_delta_out_pts <= 0:
+        raise ValueError(
+            "n_eps_pts and n_delta_out_pts should be positive, in this case are {:d} and {:d}".format(
+                n_eps_pts, n_delta_out_pts
+            )
+        )
+
+    if not isinstance(n_eps_pts, int) or not isinstance(n_delta_out_pts, int):
+        raise TypeError("n_eps_pts and n_delta_out_pts should be integers")
+
+    if not isinstance(update_f_min_args, bool):
+        raise TypeError("update_f_min_args should be a boolean")
 
     epsilons = (
         logspace(log10(eps_min), log10(eps_max), n_eps_pts)
@@ -52,27 +85,39 @@ def sweep_eps_delta_out_optimal_lambda_fixed_point(
         else logspace(log10(delta_out_max), log10(delta_out_min), n_delta_out_pts)
     )
 
+    # epseps, deltadelta_out = meshgrid(epsilons_hub, delta_out_hub)
+
     n_observables = len(funs)
-    f_min_vals = empty((n_eps_pts, n_delta_out_pts))
-    reg_params_opt = empty((n_eps_pts, n_delta_out_pts))
-    funs_values = [empty((n_eps_pts, n_delta_out_pts)) for _ in range(n_observables)]
+    f_min_vals = empty((n_delta_out_pts, n_eps_pts))
+    reg_params_opt = empty((n_delta_out_pts, n_eps_pts))
+    funs_values = [empty((n_delta_out_pts, n_eps_pts)) for _ in range(n_observables)]
 
     copy_var_func_kwargs = var_func_kwargs.copy()
     copy_var_hat_func_kwargs = var_hat_func_kwargs.copy()
+    copy_funs_args = funs_args.copy()
 
     old_reg_param_opt_begin_delta_sweep = initial_guess_reg_param
     old_initial_cond_fpe_begin_delta_sweep = initial_cond_fpe
+
     for idx, eps in enumerate(epsilons):
         old_reg_param_opt = old_reg_param_opt_begin_delta_sweep
         old_initial_cond_fpe = old_initial_cond_fpe_begin_delta_sweep
+        print(f"epsilon: {eps}")
 
         for jdx, delta_out in enumerate(delta_outs):
             copy_var_func_kwargs.update({"reg_param": old_reg_param_opt})
             copy_var_hat_func_kwargs.update({"percentage": eps, "delta_out": delta_out})
 
+            if update_f_min_args:
+                f_min_args.update({"percentage": eps, "delta_out": delta_out})
+
+            for kdx in range(n_funs):
+                if update_funs_args[kdx]:
+                    copy_funs_args[kdx].update({"percentage": eps, "delta_out": delta_out})
+
             (
-                f_min_vals[idx, jdx],
-                reg_params_opt[idx, jdx],
+                f_min_vals[jdx, idx],
+                reg_params_opt[jdx, idx],
                 (m, q, sigma),
                 out_values,
             ) = find_optimal_reg_param_function(
@@ -83,30 +128,33 @@ def sweep_eps_delta_out_optimal_lambda_fixed_point(
                 initial_guess_reg_param,
                 old_initial_cond_fpe,
                 funs=funs,
-                funs_args=funs_args,
+                funs_args=copy_funs_args,
                 f_min=f_min,
                 f_min_args=f_min_args,
                 min_reg_param=min_reg_param,
             )
 
-            old_reg_param_opt = reg_params_opt[idx, jdx]
+            old_reg_param_opt = reg_params_opt[jdx, idx]
             old_initial_cond_fpe = (m, q, sigma)
 
             if jdx == 0:
-                old_reg_param_opt_begin_delta_sweep = reg_params_opt[idx, jdx]
+                old_reg_param_opt_begin_delta_sweep = reg_params_opt[jdx, idx]
                 old_initial_cond_fpe_begin_delta_sweep = (m, q, sigma)
 
             for kdx in range(n_observables):
-                funs_values[kdx][idx, jdx] = out_values[kdx]
+                funs_values[kdx][jdx, idx] = out_values[kdx]
 
-    # to be checked
     if decreasing[0]:
+        print("decreasing epsilons")
+        epsilons = epsilons[::-1]
         f_min_vals = f_min_vals[::-1, :]
         reg_params_opt = reg_params_opt[::-1, :]
         for kdx in range(n_observables):
             funs_values[kdx] = funs_values[kdx][::-1, :]
 
     if decreasing[1]:
+        print("decreasing delta_outs")
+        delta_outs = delta_outs[::-1]
         f_min_vals = f_min_vals[:, ::-1]
         reg_params_opt = reg_params_opt[:, ::-1]
         for kdx in range(n_observables):
@@ -129,25 +177,57 @@ def sweep_eps_delta_out_optimal_lambda_hub_param_fixed_point(
     initial_guess_reg_param: float,
     initial_guess_huber_param: float,
     initial_cond_fpe: Tuple[float, float, float],
-    funs=[gen_error],
+    funs=[estimation_error],
     funs_args=[{}],
-    f_min=gen_error,
+    update_funs_args=None,
+    f_min=estimation_error,
     f_min_args={},
+    update_f_min_args=True,
     min_reg_param=SMALLEST_REG_PARAM,
     min_huber_param=SMALLEST_HUBER_PARAM,
     decreasing=[False, True],
 ):
-    if len(funs) != len(funs_args):
+    if update_funs_args is None:
+        update_funs_args = [False] * len(funs)
+
+    n_funs = len(funs)
+    n_funs_args = len(funs_args)
+    n_update_funs_args = len(update_funs_args)
+
+    if not (n_funs == n_funs_args == n_update_funs_args):
         raise ValueError(
-            "The length of funs and funs_args should be the same, in this case is {:d} and {:d}".format(
-                len(funs), len(funs_args)
+            "The length of funs, funs_args and update_funs_args should be the same, in this case is {:d}, {:d} and {:d}".format(
+                n_funs, n_funs_args, n_update_funs_args
             )
         )
 
     if len(decreasing) != 2:
+        raise ValueError("The length of decreasing should be 2, in this case is {:d}".format(len(decreasing)))
+
+    if eps_min <= 0.0 or eps_max <= 0.0:
         raise ValueError(
-            "The length of decreasing should be 2, in this case is {:d}".format(len(decreasing))
+            "eps_min and eps_max should be positive, in this case are {:f} and {:f}".format(eps_min, eps_max)
         )
+
+    if delta_out_min <= 0.0 or delta_out_max <= 0.0:
+        raise ValueError(
+            "delta_out_min and delta_out_max should be positive, in this case are {:f} and {:f}".format(
+                delta_out_min, delta_out_max
+            )
+        )
+
+    if n_eps_pts <= 0 or n_delta_out_pts <= 0:
+        raise ValueError(
+            "n_eps_pts and n_delta_out_pts should be positive, in this case are {:d} and {:d}".format(
+                n_eps_pts, n_delta_out_pts
+            )
+        )
+
+    if not isinstance(n_eps_pts, int) or not isinstance(n_delta_out_pts, int):
+        raise TypeError("n_eps_pts and n_delta_out_pts should be integers")
+
+    if not isinstance(update_f_min_args, bool):
+        raise TypeError("update_f_min_args should be a boolean")
 
     epsilons = (
         logspace(log10(eps_min), log10(eps_max), n_eps_pts)
@@ -161,13 +241,14 @@ def sweep_eps_delta_out_optimal_lambda_hub_param_fixed_point(
     )
 
     n_observables = len(funs)
-    f_min_vals = empty((n_eps_pts, n_delta_out_pts))
-    reg_params_opt = empty((n_eps_pts, n_delta_out_pts))
-    huber_params_opt = empty((n_eps_pts, n_delta_out_pts))
-    funs_values = [empty((n_eps_pts, n_delta_out_pts)) for _ in range(n_observables)]
+    f_min_vals = empty((n_delta_out_pts, n_eps_pts))
+    reg_params_opt = empty((n_delta_out_pts, n_eps_pts))
+    huber_params_opt = empty((n_delta_out_pts, n_eps_pts))
+    funs_values = [empty((n_delta_out_pts, n_eps_pts)) for _ in range(n_observables)]
 
     copy_var_func_kwargs = var_func_kwargs.copy()
     copy_var_hat_func_kwargs = var_hat_func_kwargs.copy()
+    copy_funs_args = funs_args.copy()
 
     old_reg_param_opt_begin_delta_sweep = initial_guess_reg_param
     old_huber_param_opt_begin_delta_sweep = initial_guess_huber_param
@@ -176,16 +257,24 @@ def sweep_eps_delta_out_optimal_lambda_hub_param_fixed_point(
         old_reg_param_opt = old_reg_param_opt_begin_delta_sweep
         old_huber_param_opt = old_huber_param_opt_begin_delta_sweep
         old_initial_cond_fpe = old_initial_cond_fpe_begin_delta_sweep
+        print(f"epsilon: {eps:.2e}")
 
         for jdx, delta_out in enumerate(delta_outs):
             copy_var_func_kwargs.update({"reg_param": old_reg_param_opt})
-            copy_var_hat_func_kwargs.update(
-                {"percentage": eps, "delta_out": delta_out, "a": old_huber_param_opt}
-            )
+            copy_var_hat_func_kwargs.update({"percentage": eps, "delta_out": delta_out, "a": old_huber_param_opt})
+
+            if update_f_min_args:
+                f_min_args.update({"percentage": eps, "delta_out": delta_out})
+
+            # print("\t", f_min_args)
+
+            for kdx in range(n_funs):
+                if update_funs_args[kdx]:
+                    copy_funs_args[kdx].update({"percentage": eps, "delta_out": delta_out})
 
             (
-                f_min_vals[idx, jdx],
-                (reg_params_opt[idx, jdx], huber_params_opt[idx, jdx]),
+                f_min_vals[jdx, idx],
+                (reg_params_opt[jdx, idx], huber_params_opt[jdx, idx]),
                 (m, q, sigma),
                 out_values,
             ) = find_optimal_reg_and_huber_parameter_function(
@@ -196,26 +285,28 @@ def sweep_eps_delta_out_optimal_lambda_hub_param_fixed_point(
                 (old_reg_param_opt, old_huber_param_opt),
                 old_initial_cond_fpe,
                 funs=funs,
-                funs_args=funs_args,
+                funs_args=copy_funs_args,
                 f_min=f_min,
                 f_min_args=f_min_args,
                 min_reg_param=min_reg_param,
-                min_hub_param=min_huber_param,
+                min_huber_param=min_huber_param,
             )
 
             if jdx == 0:
-                old_reg_param_opt_begin_delta_sweep = reg_params_opt[idx, jdx]
-                old_huber_param_opt_begin_delta_sweep = huber_params_opt[idx, jdx]
+                old_reg_param_opt_begin_delta_sweep = reg_params_opt[jdx, idx]
+                old_huber_param_opt_begin_delta_sweep = huber_params_opt[jdx, idx]
                 old_initial_cond_fpe_begin_delta_sweep = (m, q, sigma)
 
-            old_reg_param_opt = reg_params_opt[idx, jdx]
-            old_huber_param_opt = huber_params_opt[idx, jdx]
+            old_reg_param_opt = reg_params_opt[jdx, idx]
+            old_huber_param_opt = huber_params_opt[jdx, idx]
             old_initial_cond_fpe = (m, q, sigma)
 
             for kdx in range(n_observables):
-                funs_values[kdx][idx, jdx] = out_values[kdx]
+                funs_values[kdx][jdx, idx] = out_values[kdx]
 
     if decreasing[0]:
+        print("decreasing epsilons")
+        epsilons = epsilons[::-1]
         f_min_vals = f_min_vals[::-1, :]
         reg_params_opt = reg_params_opt[::-1, :]
         huber_params_opt = huber_params_opt[::-1, :]
@@ -223,10 +314,28 @@ def sweep_eps_delta_out_optimal_lambda_hub_param_fixed_point(
             funs_values[kdx] = funs_values[kdx][::-1, :]
 
     if decreasing[1]:
+        print("decreasing delta_outs")
+        delta_outs = delta_outs[::-1]
         f_min_vals = f_min_vals[:, ::-1]
         reg_params_opt = reg_params_opt[:, ::-1]
         huber_params_opt = huber_params_opt[:, ::-1]
         for kdx in range(n_observables):
             funs_values[kdx] = funs_values[kdx][:, ::-1]
 
-    return epsilons, delta_outs, f_min_vals, reg_params_opt, huber_params_opt, funs_values
+    # if decreasing[0]:
+    #     epsilons = epsilons[::-1]
+    #     f_min_vals = f_min_vals[:, ::-1]
+    #     reg_params_opt = reg_params_opt[:, ::-1]
+    #     huber_params_opt = huber_params_opt[:, ::-1]
+    #     for kdx in range(n_observables):
+    #         funs_values[kdx] = funs_values[kdx][:, ::-1]
+
+    # if decreasing[1]:
+    #     delta_outs = delta_outs[::-1]
+    #     f_min_vals = f_min_vals[::-1, :]
+    #     reg_params_opt = reg_params_opt[::-1, :]
+    #     reg_params_opt = reg_params_opt[::-1, :]
+    #     for kdx in range(n_observables):
+    #         funs_values[kdx] = funs_values[kdx][::-1, :]
+
+    return epsilons, delta_outs, f_min_vals, (reg_params_opt, huber_params_opt), funs_values

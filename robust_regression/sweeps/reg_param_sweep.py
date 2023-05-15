@@ -1,7 +1,7 @@
 from numpy import logspace, linspace, empty, nan
 from math import log10
 from ..utils.errors import ConvergenceError
-from ..aux_functions.misc import gen_error
+from ..aux_functions.misc import estimation_error
 from ..fixed_point_equations.fpeqs import fixed_point_finder
 
 
@@ -14,7 +14,7 @@ def sweep_reg_param_fixed_point(
     var_func_kwargs: dict,
     var_hat_func_kwargs: dict,
     initial_cond=(0.6, 0.01, 0.9),
-    funs=[gen_error],
+    funs=[estimation_error],
     funs_args=[list()],
     update_funs_args=None,
     linear=False,

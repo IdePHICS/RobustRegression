@@ -5,7 +5,7 @@ from scipy.optimize import minimize
 from ..utils.errors import MinimizationError
 from .fpeqs import fixed_point_finder
 from ..fixed_point_equations import SMALLEST_REG_PARAM, SMALLEST_HUBER_PARAM, XATOL, FATOL
-from ..aux_functions.misc import gen_error
+from ..aux_functions.misc import estimation_error
 
 
 # --------------------------------
@@ -18,10 +18,10 @@ def find_optimal_reg_param_function(
     var_hat_func_kwargs: dict,
     initial_guess_reg_param: float,
     initial_cond_fpe: Tuple[float, float, float],
-    funs=[gen_error],
+    funs=[estimation_error],
     funs_args=[list()],
-    f_min=gen_error,
-    f_min_args=(),
+    f_min=estimation_error,
+    f_min_args={},
     min_reg_param=SMALLEST_REG_PARAM,
 ):
     if len(funs) != len(funs_args):
@@ -82,10 +82,10 @@ def find_optimal_reg_and_huber_parameter_function(
     var_hat_func_kwargs: dict,
     initial_guess_reg_and_huber_param: Tuple[float, float],
     initial_cond_fpe: Tuple[float, float, float],
-    funs=[gen_error],
+    funs=[estimation_error],
     funs_args=[list()],
-    f_min=gen_error,
-    f_min_args=(),
+    f_min=estimation_error,
+    f_min_args={},
     min_reg_param=SMALLEST_REG_PARAM,
     min_huber_param=SMALLEST_HUBER_PARAM,
 ):

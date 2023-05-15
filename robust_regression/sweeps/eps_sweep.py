@@ -1,8 +1,8 @@
-from numpy import logspace, empty
+from numpy import logspace, empty, linspace
 from math import log10
 from typing import Tuple
 from ..fixed_point_equations.fpeqs import fixed_point_finder
-from ..aux_functions.misc import gen_error
+from ..aux_functions.misc import estimation_error
 from ..fixed_point_equations import SMALLEST_REG_PARAM, SMALLEST_HUBER_PARAM
 from ..fixed_point_equations.optimality_finding import (
     find_optimal_reg_param_function,
@@ -19,10 +19,11 @@ def sweep_eps_fixed_point(
     var_func_kwargs: dict,
     var_hat_func_kwargs: dict,
     initial_cond=(0.6, 0.01, 0.9),
-    funs=[gen_error],
+    funs=[estimation_error],
     funs_args=[list()],
     update_funs_args=None,
     decreasing=False,
+    linear=False,
 ):
     if update_funs_args is None:
         update_funs_args = [False] * len(funs)
@@ -47,18 +48,20 @@ def sweep_eps_fixed_point(
         raise ValueError("eps_min should be positive or equal to zero, in this case is {:f}".format(eps_min))
 
     n_observables = len(funs)
-    epsilons = (
-        logspace(log10(eps_min), log10(eps_max), n_eps_pts)
-        if not decreasing
-        else logspace(log10(eps_max), log10(eps_min), n_eps_pts)
-    )
+    if linear:
+        epsilons = linspace(eps_min, eps_max, n_eps_pts) if not decreasing else linspace(eps_max, eps_min, n_eps_pts)
+    else:
+        epsilons = (
+            logspace(log10(eps_min), log10(eps_max), n_eps_pts)
+            if not decreasing
+            else logspace(log10(eps_max), log10(eps_min), n_eps_pts)
+        )
     out_list = [empty(n_eps_pts) for _ in range(n_observables)]
 
     copy_var_hat_func_kwargs = var_hat_func_kwargs.copy()
 
     old_initial_cond = initial_cond
     for idx, eps in enumerate(epsilons):
-        print(f"eps = {eps}")
         copy_var_hat_func_kwargs.update({"percentage": eps})
 
         m, q, sigma = fixed_point_finder(
@@ -92,14 +95,15 @@ def sweep_eps_optimal_lambda_fixed_point(
     var_func_kwargs: dict,
     var_hat_func_kwargs: dict,
     initial_cond_fpe=(0.6, 0.01, 0.9),
-    funs=[gen_error],
+    funs=[estimation_error],
     funs_args=[list()],
     update_funs_args=None,
-    f_min=gen_error,
+    f_min=estimation_error,
     f_min_args={},
     update_f_min_args=False,
     min_reg_param=SMALLEST_REG_PARAM,
     decreasing=False,
+    linear=False,
 ):
     if update_funs_args is None:
         update_funs_args = [False] * len(funs)
@@ -121,11 +125,14 @@ def sweep_eps_optimal_lambda_fixed_point(
         )
 
     n_observables = len(funs)
-    epsilons = (
-        logspace(log10(eps_min), log10(eps_max), n_eps_pts)
-        if not decreasing
-        else logspace(log10(eps_max), log10(eps_min), n_eps_pts)
-    )
+    if linear:
+        epsilons = linspace(eps_min, eps_max, n_eps_pts) if not decreasing else linspace(eps_max, eps_min, n_eps_pts)
+    else:
+        epsilons = (
+            logspace(log10(eps_min), log10(eps_max), n_eps_pts)
+            if not decreasing
+            else logspace(log10(eps_max), log10(eps_min), n_eps_pts)
+        )
     f_min_vals = empty(n_eps_pts)
     reg_params_opt = empty(n_eps_pts)
     funs_values = [empty(n_eps_pts) for _ in range(n_observables)]
@@ -137,7 +144,6 @@ def sweep_eps_optimal_lambda_fixed_point(
     old_initial_cond_fpe = initial_cond_fpe
     old_reg_param_opt = inital_guess_lambda
     for idx, eps in enumerate(epsilons):
-        print(eps)
         copy_var_hat_func_kwargs.update({"percentage": eps})
         copy_var_func_kwargs.update({"reg_param": old_reg_param_opt})
 
@@ -192,15 +198,16 @@ def sweep_eps_optimal_lambda_hub_param_fixed_point(
     var_func_kwargs: dict,
     var_hat_func_kwargs: dict,
     initial_cond_fpe=(0.6, 0.01, 0.9),
-    funs=[gen_error],
+    funs=[estimation_error],
     funs_args=[list()],
     update_funs_args=None,
-    f_min=gen_error,
-    f_min_args=(),
+    f_min=estimation_error,
+    f_min_args={},
     min_reg_param=SMALLEST_REG_PARAM,
     min_huber_param=SMALLEST_HUBER_PARAM,
     decreasing=False,
     update_f_min_args=False,
+    linear=False
 ):
     if update_funs_args is None:
         update_funs_args = [False] * len(funs)
@@ -222,11 +229,18 @@ def sweep_eps_optimal_lambda_hub_param_fixed_point(
         )
 
     n_observables = len(funs)
-    epsilons = (
-        logspace(log10(eps_min), log10(eps_max), n_eps_pts)
-        if not decreasing
-        else logspace(log10(eps_max), log10(eps_min), n_eps_pts)
-    )
+    if linear:
+        epsilons = (
+            linspace(eps_min, eps_max, n_eps_pts)
+            if not decreasing
+            else linspace(eps_max, eps_min, n_eps_pts)
+        )
+    else:
+        epsilons = (
+            logspace(log10(eps_min), log10(eps_max), n_eps_pts)
+            if not decreasing
+            else logspace(log10(eps_max), log10(eps_min), n_eps_pts)
+        )
     f_min_vals = empty(n_eps_pts)
     reg_params_opt = empty(n_eps_pts)
     hub_params_opt = empty(n_eps_pts)
@@ -240,7 +254,6 @@ def sweep_eps_optimal_lambda_hub_param_fixed_point(
     old_reg_param_opt = inital_guess_params[0]
     old_hub_param_opt = inital_guess_params[1]
     for idx, eps in enumerate(epsilons):
-        print(f"eps = {eps}")
         copy_var_hat_func_kwargs.update({"percentage": eps, "a": old_hub_param_opt})
         copy_var_func_kwargs.update({"reg_param": old_reg_param_opt})
 

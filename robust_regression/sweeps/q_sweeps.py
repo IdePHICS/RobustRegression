@@ -5,7 +5,7 @@ from ..regression_numerics.amp_funcs import GAMP_algorithm_unsimplified
 from ..regression_numerics.data_generation import data_generation
 from ..utils.errors import ConvergenceError
 from math import log10
-from ..aux_functions.misc import gen_error
+from ..aux_functions.misc import estimation_error
 
 
 # add function to sweep over q in the state evolution
@@ -25,7 +25,7 @@ def sweep_fw_first_arg_GAMP(
     n_features: int,
     f_out_args: tuple,
     measure_fun_args: Tuple,
-    funs=[gen_error],
+    funs=[estimation_error],
     funs_args=[list()],
     decreasing=False,
     abs_tol=TOL_GAMP,

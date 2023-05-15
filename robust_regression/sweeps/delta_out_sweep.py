@@ -1,8 +1,9 @@
 from numpy import logspace, empty
+from numpy.random import rand
 from math import log10
 from typing import Tuple
 from ..fixed_point_equations.fpeqs import fixed_point_finder
-from ..aux_functions.misc import gen_error
+from ..aux_functions.misc import estimation_error
 from ..fixed_point_equations import SMALLEST_REG_PARAM, SMALLEST_HUBER_PARAM
 from ..fixed_point_equations.optimality_finding import (
     find_optimal_reg_param_function,
@@ -19,7 +20,7 @@ def sweep_delta_out_fixed_point(
     var_func_kwargs: dict,
     var_hat_func_kwargs: dict,
     initial_cond=(0.6, 0.01, 0.9),
-    funs=[gen_error],
+    funs=[estimation_error],
     funs_args=[{}],
     update_funs_args=None,
     decreasing=False,
@@ -57,7 +58,6 @@ def sweep_delta_out_fixed_point(
 
     old_initial_cond = initial_cond
     for idx, delta in enumerate(deltas):
-        print(f"delta_out = {delta}")
         copy_var_hat_func_kwargs.update({"delta_out": delta})
 
         m, q, sigma = fixed_point_finder(
@@ -91,14 +91,15 @@ def sweep_delta_out_optimal_lambda_fixed_point(
     var_func_kwargs: dict,
     var_hat_func_kwargs: dict,
     initial_cond_fpe=(0.6, 0.01, 0.9),
-    funs=[gen_error],
+    funs=[estimation_error],
     funs_args=[{}],
     update_funs_args=None,
-    f_min=gen_error,
+    f_min=estimation_error,
     f_min_args={},
     update_f_min_args=False,
     min_reg_param=SMALLEST_REG_PARAM,
     decreasing=False,
+    following_sol=True,
 ):
     if update_funs_args is None:
         update_funs_args = [False] * len(funs)
@@ -138,8 +139,6 @@ def sweep_delta_out_optimal_lambda_fixed_point(
     old_initial_cond_fpe = initial_cond_fpe
     old_reg_param_opt = inital_guess_lambda
     for idx, delta_out in enumerate(delta_outs):
-        print(f"delta_out = {delta_out}")
-
         copy_var_hat_func_kwargs.update({"delta_out": delta_out})
         copy_var_func_kwargs.update({"reg_param": old_reg_param_opt})
 
@@ -160,7 +159,7 @@ def sweep_delta_out_optimal_lambda_fixed_point(
             var_hat_func,
             copy_var_func_kwargs,
             copy_var_hat_func_kwargs,
-            old_reg_param_opt,
+            old_reg_param_opt if following_sol else float(rand(1)),
             old_initial_cond_fpe,
             funs=funs,
             funs_args=copy_funs_args,
@@ -195,15 +194,16 @@ def sweep_delta_out_optimal_lambda_hub_param_fixed_point(
     var_func_kwargs: dict,
     var_hat_func_kwargs: dict,
     initial_cond_fpe=(0.6, 0.01, 0.9),
-    funs=[gen_error],
+    funs=[estimation_error],
     funs_args=[{}],
     update_funs_args=None,
-    f_min=gen_error,
+    f_min=estimation_error,
     f_min_args={},
     update_f_min_args=False,
     min_reg_param=SMALLEST_REG_PARAM,
     min_huber_param=SMALLEST_HUBER_PARAM,
     decreasing=False,
+    following_sol=True,
 ):
     if update_funs_args is None:
         update_funs_args = [False] * len(funs)
@@ -223,7 +223,7 @@ def sweep_delta_out_optimal_lambda_hub_param_fixed_point(
         raise ValueError(
             "delta_out_min should be smaller than delta_out_max, in this case are {:f} and {:f}".format(
                 delta_out_min, delta_out_max
-            )     
+            )
         )
 
     n_observables = len(funs)
@@ -245,8 +245,6 @@ def sweep_delta_out_optimal_lambda_hub_param_fixed_point(
     old_reg_param_opt = inital_guess_params[0]
     old_hub_param_opt = inital_guess_params[1]
     for idx, delta_out in enumerate(delta_outs):
-        print(f"delta_out = {delta_out}")
-
         copy_var_hat_func_kwargs.update({"delta_out": delta_out, "a": old_hub_param_opt})
         copy_var_func_kwargs.update({"reg_param": old_reg_param_opt})
 
@@ -266,7 +264,10 @@ def sweep_delta_out_optimal_lambda_hub_param_fixed_point(
             var_hat_func,
             copy_var_func_kwargs,
             copy_var_hat_func_kwargs,
-            (old_reg_param_opt, old_hub_param_opt),
+            (
+                old_reg_param_opt if following_sol else float(rand(1)),
+                old_hub_param_opt if following_sol else float(rand(1)),
+            ),
             old_initial_cond_fpe,
             funs=funs,
             funs_args=copy_funs_args,

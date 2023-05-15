@@ -4,8 +4,8 @@ from .data_generation import data_generation
 
 def gen_error_data(ys, xs, estimated_theta, ground_truth_theta):
     _, d = xs.shape
-    gen_error = sum((ground_truth_theta - estimated_theta) ** 2) / d
-    return gen_error
+    estimation_error = sum((ground_truth_theta - estimated_theta) ** 2) / d
+    return estimation_error
 
 
 def train_error_data(

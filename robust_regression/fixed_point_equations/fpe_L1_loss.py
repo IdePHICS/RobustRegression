@@ -1,6 +1,8 @@
 from numba import njit
 from numpy import pi
-from math import erf, erfc, exp, log, sqrt
+# from math import exp, log, sqrt # erf, erfc, 
+from scipy.special import erf, erfc
+from numpy import exp, log, sqrt
 
 
 @njit(error_model="numpy", fastmath=False)
@@ -45,7 +47,7 @@ def var_hat_func_L1_double_noise(m, q, sigma, alpha, delta_in, delta_out, percen
     return m_hat, q_hat, sigma_hat
 
 
-@njit(error_model="numpy", fastmath=False)
+# @njit(error_model="numpy", fastmath=False)
 def var_hat_func_L1_decorrelated_noise(m, q, sigma, alpha, delta_in, delta_out, percentage, beta):
     small_sqrt = delta_in - 2 * m + q + 1
     large_sqrt = delta_out - 2 * m * beta + q + beta**2

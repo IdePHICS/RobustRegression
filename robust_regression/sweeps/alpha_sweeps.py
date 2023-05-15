@@ -6,7 +6,7 @@ from ..utils.errors import ConvergenceError
 from ..fixed_point_equations.fpeqs import fixed_point_finder
 from ..regression_numerics.data_generation import data_generation
 from ..regression_numerics.amp_funcs import GAMP_algorithm_unsimplified
-from ..aux_functions.misc import gen_error
+from ..aux_functions.misc import estimation_error
 from ..fixed_point_equations import SMALLEST_REG_PARAM, SMALLEST_HUBER_PARAM
 from ..regression_numerics import TOL_GAMP, MAX_ITER_GAMP, BLEND_GAMP
 from ..fixed_point_equations.optimality_finding import (
@@ -25,7 +25,7 @@ def sweep_alpha_fixed_point(
     var_func_kwargs: dict,
     var_hat_func_kwargs: dict,
     initial_cond_fpe=(0.6, 0.01, 0.9),
-    funs=[gen_error],
+    funs=[estimation_error],
     funs_args=[{}],
     update_funs_args=None,
     decreasing=False,
@@ -64,7 +64,6 @@ def sweep_alpha_fixed_point(
 
     old_initial_cond = initial_cond_fpe
     for idx, alpha in enumerate(alphas):
-        print(f"alpha = {alpha}")
         var_hat_func_kwargs.update({"alpha": alpha})
         ms_qs_sigmas[idx] = fixed_point_finder(
             var_func, var_hat_func, old_initial_cond, var_func_kwargs, var_hat_func_kwargs
@@ -96,10 +95,10 @@ def sweep_alpha_optimal_lambda_fixed_point(
     var_func_kwargs: dict,
     var_hat_func_kwargs: dict,
     initial_cond_fpe=(0.6, 0.01, 0.9),
-    funs=[gen_error],
+    funs=[estimation_error],
     funs_args=[{}],
     update_funs_args=None,
-    f_min=gen_error,
+    f_min=estimation_error,
     f_min_args={},
     update_f_min_args=False,
     min_reg_param=SMALLEST_REG_PARAM,
@@ -144,7 +143,7 @@ def sweep_alpha_optimal_lambda_fixed_point(
     old_initial_cond_fpe = initial_cond_fpe
     old_reg_param_opt = inital_guess_lambda
     for idx, alpha in enumerate(alphas):
-        print(f"alpha = {alpha}")
+        # print(f"\talpha = {alpha}")
         copy_var_hat_func_kwargs.update({"alpha": float(alpha)})
         copy_var_func_kwargs.update({"reg_param": np.random.rand(1) + 0.0001})
 
@@ -199,11 +198,11 @@ def sweep_alpha_optimal_lambda_hub_param_fixed_point(
     var_func_kwargs: dict,
     var_hat_func_kwargs: dict,
     initial_cond_fpe=(0.6, 0.01, 0.9),
-    funs=[gen_error],
+    funs=[estimation_error],
     funs_args=[list()],
     update_funs_args=None,
-    f_min=gen_error,
-    f_min_args=(),
+    f_min=estimation_error,
+    f_min_args={},
     update_f_min_args=False,
     min_reg_param=SMALLEST_REG_PARAM,
     min_huber_param=SMALLEST_HUBER_PARAM,
@@ -250,7 +249,7 @@ def sweep_alpha_optimal_lambda_hub_param_fixed_point(
     old_reg_param_opt = inital_guess_params[0]
     old_hub_param_opt = inital_guess_params[1]
     for idx, alpha in enumerate(alphas):
-        print(f"alpha = {alpha}")
+        # print(f"\talpha = {alpha}")
         copy_var_hat_func_kwargs.update({"alpha": alpha, "a": old_hub_param_opt})
         copy_var_func_kwargs.update({"reg_param": old_reg_param_opt})
 
@@ -271,7 +270,7 @@ def sweep_alpha_optimal_lambda_hub_param_fixed_point(
             var_hat_func,
             copy_var_func_kwargs,
             copy_var_hat_func_kwargs,
-            (old_reg_param_opt, old_hub_param_opt),
+            (old_reg_param_opt, old_hub_param_opt), # (float(np.random.rand(1) + 1), old_hub_param_opt),
             old_initial_cond_fpe,
             funs=funs,
             funs_args=copy_funs_args,
@@ -315,7 +314,7 @@ def sweep_alpha_GAMP(
     f_w_args: tuple,
     f_out_args: tuple,
     measure_fun_args: Tuple,
-    funs=[gen_error],
+    funs=[estimation_error],
     funs_args=[list()],
     decreasing=False,
     abs_tol=TOL_GAMP,
@@ -398,7 +397,7 @@ def sweep_alpha_descend_lambda(
     n_lambda_pts: int,
     var_func_kwargs: dict,
     var_hat_func_kwargs: dict,
-    funs=[gen_error],
+    funs=[estimation_error],
     funs_args=[list()],
     initial_cond_fpe=(0.6, 0.01, 0.9),
 ):

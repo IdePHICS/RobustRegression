@@ -47,10 +47,11 @@ def var_hat_func_Huber_double_noise(m, q, sigma, alpha, delta_in, delta_out, per
     return m_hat, q_hat, sigma_hat
 
 
-@njit(error_model="numpy", fastmath=True)
+# @njit(error_model="numpy", fastmath=True)
 def var_hat_func_Huber_decorrelated_noise(
     m, q, sigma, alpha, delta_in, delta_out, percentage, beta, a
 ):
+    # print(m,q,sigma,alpha,delta_in,delta_out,percentage,beta,a)
     small_sqrt = delta_in - 2 * m + q + 1
     large_sqrt = delta_out - 2 * m * beta + q + beta**2
     small_erf = (a * (sigma + 1)) / sqrt(2 * small_sqrt)

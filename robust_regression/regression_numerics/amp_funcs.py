@@ -8,7 +8,7 @@ from ..utils.errors import ConvergenceError
 from ..aux_functions.misc import damped_update
 
 
-@njit
+# @njit
 def GAMP_algorithm_unsimplified(
     f_w: callable,
     Df_w: callable,
@@ -61,12 +61,12 @@ def GAMP_algorithm_unsimplified(
     return w_hat_t
 
 
-@njit
+# @njit
 def GAMP_unsimplified_iters(
     f_w: callable,
-    Df_out: callable,
     Df_w: callable,
     f_out: callable,
+    Df_out: callable,
     ys: ndarray,
     xs: ndarray,
     f_w_args: tuple,

@@ -13,11 +13,9 @@ def Z_out_Bayes_decorrelated_noise(
     eps: float,
     beta: float,
 ) -> float:
-    return (1 - eps) * exp(-((y - omega) ** 2) / (2 * (V + delta_in))) / sqrt(
-        2 * pi * (V + delta_in)
-    ) + eps * exp(-((y - beta * omega) ** 2) / (2 * (beta**2 * V + delta_out))) / sqrt(
-        2 * pi * (beta**2 * V + delta_out)
-    )
+    return (1 - eps) * exp(-((y - omega) ** 2) / (2 * (V + delta_in))) / sqrt(2 * pi * (V + delta_in)) + eps * exp(
+        -((y - beta * omega) ** 2) / (2 * (beta**2 * V + delta_out))
+    ) / sqrt(2 * pi * (beta**2 * V + delta_out))
 
 
 @vectorize("float64(float64, float64, float64, float64, float64, float64, float64)")
@@ -31,13 +29,11 @@ def DZ_out_Bayes_decorrelated_noise(
     beta: float,
 ) -> float:
     small_exponential = exp(-((y - omega) ** 2) / (2 * (V + delta_in))) / sqrt(2 * pi)
-    large_exponential = exp(-((y - beta * omega) ** 2) / (2 * (beta**2 * V + delta_out))) / sqrt(
-        2 * pi
-    )
+    large_exponential = exp(-((y - beta * omega) ** 2) / (2 * (beta**2 * V + delta_out))) / sqrt(2 * pi)
 
-    return (1 - eps) * small_exponential * (y - omega) / pow(
-        V + delta_in, 1.5
-    ) + eps * beta * large_exponential * (y - beta * omega) / pow(beta**2 * V + delta_out, 1.5)
+    return (1 - eps) * small_exponential * (y - omega) / pow(V + delta_in, 1.5) + eps * beta * large_exponential * (
+        y - beta * omega
+    ) / pow(beta**2 * V + delta_out, 1.5)
 
 
 @vectorize("float64(float64, float64, float64, float64, float64, float64, float64)")
@@ -55,10 +51,7 @@ def f_out_Bayes_decorrelated_noise(
     return (
         (y - omega) * (1 - eps) * exp_in / pow(V + delta_in, 3 / 2)
         + eps * beta * (y - beta * omega) * exp_out / pow(beta**2 * V + delta_out, 3 / 2)
-    ) / (
-        (1 - eps) * exp_in / pow(V + delta_in, 1 / 2)
-        + eps * exp_out / pow(beta**2 * V + delta_out, 1 / 2)
-    )
+    ) / ((1 - eps) * exp_in / pow(V + delta_in, 1 / 2) + eps * exp_out / pow(beta**2 * V + delta_out, 1 / 2))
 
 
 @vectorize("float64(float64, float64, float64, float64, float64, float64, float64)")
@@ -77,17 +70,24 @@ def Df_out_Bayes_decorrelated_noise(
     exp_out = exp(-((y - beta * omega) ** 2) / (2 * (beta**2 * V + delta_out)))
 
     return f_out_2 + (
-        (1 - eps) * (y - omega) ** 2 * exp(-exp_in) / pow(V + delta_in, 2.5)
-        + exp(-exp_out)
-        * (y - beta * omega) ** 2
-        * (beta**2 * eps)
-        / pow(V * beta**2 + delta_out, 2.5)
-        - (1 - eps) * exp(-exp_in) / pow(V + delta_in, 1.5)
-        - exp(-exp_out) * beta**2 * eps / pow(V * beta**2 + delta_out, 1.5)
-    ) / (
-        (1 - eps) * exp(-exp_in) / pow(V + delta_in, 0.5)
-        + eps * exp(-exp_out) / pow(beta**2 * V + delta_out, 0.5)
-    )
+        (1 - eps) * (y - omega) ** 2 * exp_in / pow(V + delta_in, 2.5)
+        + exp_out * (y - beta * omega) ** 2 * (beta**2 * eps) / pow(V * beta**2 + delta_out, 2.5)
+        - (1 - eps) * exp_in / pow(V + delta_in, 1.5)
+        - exp_out * beta**2 * eps / pow(V * beta**2 + delta_out, 1.5)
+    ) / ((1 - eps) * exp_in / pow(V + delta_in, 0.5) + eps * exp_out / pow(beta**2 * V + delta_out, 0.5))
+
+    # return f_out_2 + (
+    #     (1 - eps) * (y - omega) ** 2 * exp(-exp_in) / pow(V + delta_in, 2.5)
+    #     + exp(-exp_out)
+    #     * (y - beta * omega) ** 2
+    #     * (beta**2 * eps)
+    #     / pow(V * beta**2 + delta_out, 2.5)
+    #     - (1 - eps) * exp(-exp_in) / pow(V + delta_in, 1.5)
+    #     - exp(-exp_out) * beta**2 * eps / pow(V * beta**2 + delta_out, 1.5)
+    # ) / (
+    #     (1 - eps) * exp(-exp_in) / pow(V + delta_in, 0.5)
+    #     + eps * exp(-exp_out) / pow(beta**2 * V + delta_out, 0.5)
+    # )
 
 
 # -----------------------------------
@@ -134,6 +134,7 @@ def Df_out_L1(y: float, omega: float, V: float) -> float:
 
 
 # -----------------------------------
+
 
 # what is this strange stuff? To be checked ...
 @vectorize(["float64(float64, float64, float64, float64)"])

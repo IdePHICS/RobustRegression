@@ -40,6 +40,14 @@ def excess_gen_error(m, q, sigma, delta_in, delta_out, percentage, beta):
     return gen_error(m, q, sigma, delta_in, delta_out, percentage, beta) - gen_err_BO_alpha_inf
 
 
+def excess_gen_error_oracle_rescaling(m, q, sigma, delta_in, delta_out, percentage, beta):
+    oracle_norm = 1 - percentage + percentage * beta
+    m_prime = oracle_norm * m / sqrt(q)
+    q_prime = oracle_norm**2
+
+    return excess_gen_error(m_prime, q_prime, sigma, delta_in, delta_out, percentage, beta)
+
+
 def estimation_error_rescaled(m, q, sigma, delta_in, delta_out, percentage, beta, norm_const):
     m = m / norm_const
     q = q / (norm_const**2)

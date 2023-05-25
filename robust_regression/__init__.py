@@ -1,4 +1,4 @@
-__pkgname__ = 'robust-regression-vilu'
+__pkgname__ = 'robust-regression-package'
 __version__ = '1.0.0'
 __author__ = 'Matteo Vilucchio'
 __license__ = 'MIT'

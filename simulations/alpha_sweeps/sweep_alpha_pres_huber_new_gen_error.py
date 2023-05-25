@@ -14,7 +14,7 @@ from robust_regression.fixed_point_equations.fpe_Huber_loss import (
 )
 from robust_regression.fixed_point_equations.fpe_L2_regularization import var_func_L2
 import numpy as np
-from robust_regression.aux_functions.misc import gen_error_ML
+from robust_regression.aux_functions.misc import excess_gen_error
 from robust_regression.aux_functions.stability_functions import (
     stability_ridge,
     stability_l1_l2,
@@ -61,7 +61,7 @@ delta_in, delta_out, percentage, beta = 1.0, 5.0, 0.1, 0.0
         "a": 1.0,
     },
     initial_cond_fpe=(0.6, 0.01, 0.9),
-    f_min=gen_error_ML,
+    f_min=excess_gen_error,
     f_min_args=(delta_in, delta_out, percentage, beta),
     funs=[sigma_order_param, q_order_param, m_order_param],
     funs_args=[{}, {}, {}],

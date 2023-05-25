@@ -7,20 +7,9 @@ from robust_regression.fixed_point_equations.fpe_L2_loss import (
     var_hat_func_L2_decorrelated_noise,
 )
 from robust_regression.fixed_point_equations.fpe_BO import var_func_BO, var_hat_func_BO_num_decorrelated_noise
-from robust_regression.fixed_point_equations.fpe_L1_loss import (
-    var_hat_func_L1_decorrelated_noise,
-)
-from robust_regression.fixed_point_equations.fpe_Huber_loss import (
-    var_hat_func_Huber_decorrelated_noise,
-)
 from robust_regression.fixed_point_equations.fpe_L2_regularization import var_func_L2
-from robust_regression.aux_functions.misc import gen_error, gen_error_ML
+from robust_regression.aux_functions.misc import estimation_error, excess_gen_error
 import numpy as np
-from robust_regression.aux_functions.stability_functions import (
-    stability_ridge,
-    stability_l1_l2,
-    stability_huber,
-)
 
 
 def condition_MP(alphas):
@@ -62,31 +51,31 @@ delta_eff = (1 - percentage) * delta_in + percentage * delta_out
         "beta": beta,
     },
     initial_cond_fpe=(0.6, 0.01, 0.9),
-    f_min=gen_error_ML,
-    f_min_args=(delta_in, delta_out, percentage, beta),
+    f_min=excess_gen_error,
+    f_min_args={"delta_in" : delta_in, "delta_out" : delta_out, "percentage" : percentage, "beta" : beta},
     funs=[sigma_order_param, q_order_param, m_order_param],
     funs_args=[{}, {}, {}],
 )
 
 # compute the same with BO
-alphas_BO, (gen_error_BO, qs_BO) = alsw.sweep_alpha_fixed_point(
-    var_func_BO,
-    var_hat_func_BO_num_decorrelated_noise,
-    0.01,
-    10000,
-    40,
-    {"reg_param": 1e-5},
-    {
-        "delta_in": delta_in,
-        "delta_out": delta_out,
-        "percentage": percentage,
-        "beta": beta,
-    },
-    initial_cond_fpe=(0.6, 0.01, 0.9),
-    funs=[gen_error_ML, q_order_param],
-    funs_args=[(delta_in, delta_out, percentage, beta), {}],
-    decreasing=False,
-)
+# alphas_BO, (gen_error_BO_old, qs_BO) = alsw.sweep_alpha_fixed_point(
+#     var_func_BO,
+#     var_hat_func_BO_num_decorrelated_noise,
+#     0.01,
+#     10000,
+#     40,
+#     {"reg_param": 1e-5},
+#     {
+#         "delta_in": delta_in,
+#         "delta_out": delta_out,
+#         "percentage": percentage,
+#         "beta": beta,
+#     },
+#     initial_cond_fpe=(0.6, 0.01, 0.9),
+#     funs=[excess_gen_error, q_order_param],
+#     funs_args=[(delta_in, delta_out, percentage, beta), {}],
+#     decreasing=False,
+# )
 
 first_idx = 0
 for idx, rp in enumerate(reg_param_opt):
@@ -132,7 +121,7 @@ for idx, rp in enumerate(reg_param_opt):
 
 plt.figure(figsize=(10, 10))
 
-plt.subplot(311)
+plt.subplot(211)
 plt.title(
     "Ridge regression, L2 loss, L2 noise, $\\alpha$ sweep, $\\Delta_{{in}} = {}$, $\\Delta_{{out}} = {}$, $\\epsilon = {}$, $\\beta = {}$".format(
         delta_in, delta_out, percentage, beta
@@ -141,51 +130,32 @@ plt.title(
 
 color = next(plt.gca()._get_lines.prop_cycler)["color"]
 plt.plot(alphas, f_min_vals, color=color, label=r"$E_{gen}$")
-# plt.plot(alphas_BO, gen_error_BO, color="red", label=r"$E_{gen}$ (BO)")
+plt.plot(alphas, np.arccos(ms / np.sqrt(qs)) / np.pi, label="angle")
+
+# plt.plot(alphas_BO, gen_error_BO_old, color="red", label=r"$E_{gen}$ (BO)")
 
 # plt.errorbar(alphas_num, gen_error_mean, yerr=gen_error_std, marker=".", color=color)
-plt.plot(alphas_BO, 1 - qs_BO, color="green", label=r"$\|w^\star - \hat{w}\|^2$ (BO)")
+# plt.plot(alphas_BO, 1 - qs_BO, color="green", label=r"$\|w^\star - \hat{w}\|^2$ (BO)")
 # plt.plot(alphas, 1 + qs - 2 * ms, label=r"$\|w^\star - \hat{w}\|^2$")
 
-# plt.plot(alphas, np.arccos(ms / np.sqrt(qs)) / np.pi, label="angle")
 plt.yscale("log")
 plt.xscale("log")
 plt.ylabel(r"$E_{gen}$")
 plt.legend()
 plt.grid()
 
-plt.subplot(312)
+plt.subplot(212)
 plt.plot(alphas, reg_param_opt, label=r"$\lambda_{opt}$")
-plt.axhline(
-    y=((1 - percentage) * delta_in + percentage * delta_out) / (1 - percentage + beta**2 * percentage), color="red"
-)
-plt.axhline(
-    y=(percentage * (beta**2 - 1) + delta_eff) / (1 - percentage + percentage * beta**2),
-    color="green",
-)
+# plt.axhline(
+#     y=((1 - percentage) * delta_in + percentage * delta_out) / (1 - percentage + beta**2 * percentage), color="red"
+# )
+# plt.axhline(
+#     y=(percentage * (beta**2 - 1) + delta_eff) / (1 - percentage + percentage * beta**2),
+#     color="green",
+# )
 plt.xscale("log")
 plt.ylabel(r"$\lambda_{opt}$")
 plt.legend()
 plt.grid()
 
-plt.subplot(313)
-plt.plot(
-    alphas,
-    stability_ridge(ms, qs, sigmas, alphas, reg_param_opt, delta_in, delta_out, percentage, beta),
-    label=r"Stability",
-)
-plt.legend()
-plt.axvline(alphas[first_idx], color="red")
-plt.xscale("log")
-plt.grid()
-plt.ylabel("Stability cond.")
-plt.xlabel(r"$\alpha$")
-
 plt.show()
-
-np.savetxt(
-    "./simulations/data/TEST_alpha_sweep_Ridge.csv",
-    np.array([alphas, f_min_vals, reg_param_opt]).T,
-    delimiter=",",
-    header="alpha,f_min,lambda_opt,hub_param_opt",
-)

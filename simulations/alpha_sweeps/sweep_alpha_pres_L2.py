@@ -65,9 +65,9 @@ delta_in, delta_out, percentage, beta = 1.0, 5.0, 0.1, 0.0
 ) = alsw.sweep_alpha_optimal_lambda_fixed_point(
     var_func_L2,
     var_hat_func_L2_decorrelated_noise,
-    0.01,
-    100,
-    100,
+    0.1,
+    100000,
+    200,
     3.0,
     {"reg_param": 3.0},
     {
@@ -79,6 +79,7 @@ delta_in, delta_out, percentage, beta = 1.0, 5.0, 0.1, 0.0
     initial_cond_fpe=(0.6, 0.01, 0.9),
     funs=[sigma_order_param, q_order_param, m_order_param],
     funs_args=[{}, {}, {}],
+    min_reg_param=1e-8,
 )
 
 # print("first done")
@@ -106,14 +107,24 @@ for idx, rp in enumerate(reg_param_opt):
         first_idx = idx
         break
 
-
 plt.figure(figsize=(10, 10))
 
 plt.subplot(311)
-plt.title("Ridge regression, L2 loss, L2 noise, $\\alpha$ sweep, $\\Delta_{{in}} = {}$, $\\Delta_{{out}} = {}$, $\\beta = {}$".format(delta_in, delta_out, beta))
+plt.title(
+    "Ridge regression, L2 loss, L2 noise, $\\alpha$ sweep, $\\Delta_{{in}} = {}$, $\\Delta_{{out}} = {}$, $\\epsilon = {}$, $\\beta = {}$".format(
+        delta_in, delta_out, percentage, beta
+    )
+)
 plt.plot(alphas, f_min_vals)
+plt.plot(alphas, qs, label="q")
+plt.axhline(percentage**2 * (beta - 1) ** 2, color="red", label="$\\epsilon^2 (\\beta -1)^2$")
+plt.axhline(
+    (1 - np.sqrt(percentage**2 - 2 * beta * percentage**2 + beta**2 * percentage**2)) ** 2, color="green"
+)
+plt.plot(alphas, np.arccos(ms / np.sqrt(qs)) / np.pi, label="angle")
 plt.yscale("log")
 plt.xscale("log")
+plt.legend()
 plt.ylabel(r"$E_{gen}$")
 plt.grid()
 
@@ -132,7 +143,11 @@ plt.grid()
 plt.subplot(313)
 # plt.plot(alphas, sigmas, label=r"$\Sigma$")
 # plt.plot(alphas, 1 - alphas * (sigmas / (sigmas + 1))**2, label=r"$1 - \alpha \Sigma^2 / (\Sigma + 1)^2$")
-plt.plot(alphas, stability_ridge(ms, qs, sigmas, alphas, reg_param_opt, delta_in, delta_out, percentage, beta), label=r"Stability")
+plt.plot(
+    alphas,
+    stability_ridge(ms, qs, sigmas, alphas, reg_param_opt, delta_in, delta_out, percentage, beta),
+    label=r"Stability",
+)
 plt.legend()
 plt.axvline(alphas[first_idx], color="red")
 plt.xscale("log")

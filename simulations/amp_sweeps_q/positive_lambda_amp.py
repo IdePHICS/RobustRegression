@@ -18,7 +18,7 @@ from robust_regression.fixed_point_equations.fpe_L1_loss import var_hat_func_L1_
 from robust_regression.fixed_point_equations.fpe_Huber_loss import (
     var_hat_func_Huber_decorrelated_noise,
 )
-from robust_regression.aux_functions.misc import gen_error
+from robust_regression.aux_functions.misc import estimation_error
 from robust_regression.aux_functions.loss_functions import l2_loss, l1_loss, huber_loss
 from robust_regression.aux_functions.training_errors import (
     training_error_l2_loss,
@@ -93,7 +93,7 @@ for idx, reg_param in enumerate(reg_params):
         {"reg_param": reg_param},
         {"delta_in": delta_in, "delta_out": delta_out, "percentage": percentage, "beta": beta},
         initial_cond_fpe=(m_init, q_init, sigma_init),
-        funs=[gen_error, training_error_l2_loss, m_order_param, q_order_param, sigma_order_param],
+        funs=[estimation_error, training_error_l2_loss, m_order_param, q_order_param, sigma_order_param],
         funs_args=[list(), (delta_in, delta_out, percentage, beta), list(), list(), list()],
     )
 
@@ -112,7 +112,7 @@ for idx, reg_param in enumerate(reg_params):
         {"reg_param": reg_param},
         {"delta_in": delta_in, "delta_out": delta_out, "percentage": percentage, "beta": beta},
         initial_cond_fpe=(m_init, q_init, sigma_init),
-        funs=[gen_error, training_error_l1_loss, m_order_param, q_order_param, sigma_order_param],
+        funs=[estimation_error, training_error_l1_loss, m_order_param, q_order_param, sigma_order_param],
         funs_args=[list(), (delta_in, delta_out, percentage, beta), list(), list(), list()],
     )
 
@@ -138,7 +138,7 @@ for idx, reg_param in enumerate(reg_params):
     #     },
     #     initial_cond_fpe=(m_init, q_init, sigma_init),
     #     funs=[
-    #         gen_error,
+    #         estimation_error,
     #         training_error_huber_loss,
     #         m_order_param,
     #         q_order_param,

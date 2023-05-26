@@ -6,7 +6,7 @@ This repository contains the package and the notebooks to reproduce the figures 
 
 The package is contained in the folder `robust_regression` is subdivide into 5 other packages:
 * `sweeps` : contains helpers to create sweeps of some parameters
-* `aux_functions` : contains the definitions of fully vectorized (á la Numpy) function like $\mathcal{Z}_{\mathrm{out}}$, $f_{\mathrm{out}}$ and $f_{\mathbf{w}}$.
+* `aux_functions` : contains the definitions of fully vectorized (á la Numpy) function like $f_\mathrm{out}$ and $f_{\mathbf{w}}$.
 * `fixed_point_equations` : contains the definitions of the fixed point form for the problems studied. Also it contains the functions to run a single fixed point iteration or to optimize over some parameters.
 * `regression_numerics` : contains the relevant routines to perform ERM simulations and AMP simulations
 * `utils` : miscellaneus stuff used for numerical integration or root finding.
